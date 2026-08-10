@@ -1,329 +1,254 @@
-/* =========================================================
-   MINDGLOW - CSS DEFINITIVO Y CORREGIDO
-   ========================================================= */
-
-:root {
-    --bg-main: #F5F5F7; 
-    --text-dark: #1D1D1F;
-    --text-gray: #86868B;
-    --accent: #6C63FF;
-    --radius-lg: 32px;
-    --radius-md: 20px;
-    --shadow-soft: 0 20px 40px rgba(0, 0, 0, 0.06);
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    scroll-behavior: smooth;
 }
 
-* { 
-    margin: 0; 
-    padding: 0; 
-    box-sizing: border-box; 
-    font-family: 'Inter', sans-serif; 
-    scroll-behavior: smooth; 
+body {
+    background-color: #f4f8fb;
+    color: #333;
+    line-height: 1.6;
 }
 
-body { 
-    background-color: var(--bg-main); 
-    color: var(--text-dark); 
-    -webkit-font-smoothing: antialiased; 
+/* Navbar */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 5%;
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
 }
 
-/* --- 1. NAVEGACIÓN Y LOGO SUPERIOR --- */
-.floating-nav { 
-    position: fixed; 
-    top: 20px; 
-    left: 50%; 
-    transform: translateX(-50%); 
-    background: rgba(255, 255, 255, 0.9); 
-    backdrop-filter: blur(20px); 
-    -webkit-backdrop-filter: blur(20px); 
-    display: flex; 
-    align-items: center; 
-    justify-content: space-between; 
-    padding: 10px 22px; 
-    border-radius: 50px; 
-    width: 95%; 
-    max-width: 1000px; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08); 
-    z-index: 1000; 
-    border: 1px solid rgba(255,255,255,0.6); 
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.logo-container { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
+.logo-icon { font-size: 1.8rem; }
+.logo-text { font-weight: 700; font-size: 1.4rem; color: #2c3e50; }
+
+.navbar nav ul {
+    display: flex;
+    list-style: none;
+    gap: 20px;
 }
 
-/* ESTILO DEFINITIVO DEL LOGO DEL MENÚ */
-.nav-logo-img { 
-    width: 42px; 
-    height: 42px; 
-    border-radius: 50%; 
-    object-fit: contain; 
-    background-color: #ffffff; 
-    border: 2px solid var(--accent); 
-    padding: 4px;
-    display: inline-block;
-    box-shadow: 0 2px 8px rgba(108, 99, 255, 0.2);
+.navbar nav a {
+    text-decoration: none;
+    color: #555;
+    font-weight: 500;
+    transition: color 0.3s;
 }
 
-.logo-text { 
-    font-weight: 900; 
-    font-size: 1.2rem; 
-    color: var(--text-dark); 
+.navbar nav a:hover { color: #00bfff; }
+
+.btn-contacto, .btn-primary {
+    background: #00bfff;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s;
 }
 
-.nav-links { 
-    list-style: none; 
-    display: flex; 
-    gap: 18px; 
+.btn-contacto:hover, .btn-primary:hover { background: #0099cc; }
+
+/* Hero */
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 60px 8%;
+    background: linear-gradient(135deg, #e0f2fe 0%, #ffffff 100%);
 }
 
-.nav-links a { 
-    text-decoration: none; 
-    color: var(--text-gray); 
-    font-weight: 600; 
-    font-size: 0.9rem; 
-    transition: color 0.3s; 
+.badge {
+    background-color: #e1f5fe;
+    color: #0288d1;
+    padding: 5px 15px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
-.nav-links a:hover { 
-    color: var(--text-dark); 
+.hero h1 { font-size: 2.8rem; margin: 15px 0; color: #1e293b; }
+.highlight { color: #00bfff; }
+.hero-buttons { margin-top: 25px; display: flex; gap: 15px; }
+
+.btn-secondary {
+    background: #ffffff;
+    color: #00bfff;
+    border: 2px solid #00bfff;
+    padding: 10px 20px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
 }
 
-.btn-contact-nav { 
-    background: var(--text-dark); 
-    color: white; 
-    text-decoration: none; 
-    padding: 9px 20px; 
-    border-radius: 30px; 
-    font-weight: 600; 
-    font-size: 0.9rem; 
-    transition: background 0.3s; 
+.avatar-large { font-size: 6rem; display: block; text-align: center; }
+.mascota-tag { text-align: center; font-weight: bold; background: #fff; padding: 5px 15px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
+/* Mood Tracker */
+.mood-tracker {
+    text-align: center;
+    padding: 40px 5%;
+    background: #ffffff;
+    margin: 20px 8%;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
 }
 
-.btn-contact-nav:hover { 
-    background: var(--accent); 
+.emociones-grid {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 20px 0;
+    flex-wrap: wrap;
 }
 
-/* --- 2. SECCIÓN PRINCIPAL (HERO) Y MASCOTA --- */
-.hero-app { 
-    padding: 140px 20px 70px 20px; 
-    text-align: center; 
-    max-width: 850px; 
-    margin: 0 auto; 
+.emociones-grid button {
+    background: #f1f5f9;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: transform 0.2s, background 0.2s;
 }
 
-.school-link-badge { 
-    display: inline-block; 
-    background: white; 
-    color: var(--accent); 
-    padding: 9px 18px; 
-    border-radius: 30px; 
-    font-size: 0.88rem; 
-    font-weight: 700; 
-    text-decoration: none; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-    margin-bottom: 25px; 
-    border: 1px solid rgba(108, 99, 255, 0.2); 
-    transition: transform 0.3s; 
+.emociones-grid button:hover { transform: translateY(-3px); background: #e2e8f0; }
+
+.mensaje-emocion { font-style: italic; color: #64748b; }
+
+/* Mascotas */
+.seccion-mascotas { text-align: center; padding: 50px 8%; }
+.companero-actual { margin: 15px 0; font-size: 1.1rem; }
+
+.mascotas-cards {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    margin-top: 30px;
+    flex-wrap: wrap;
 }
 
-.school-link-badge:hover { 
-    transform: translateY(-2px); 
+.card-mascota {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    width: 220px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.3s;
 }
 
-.hero-app h1 { 
-    font-size: 4rem; 
-    font-weight: 900; 
-    line-height: 1.1; 
-    margin: 15px 0 25px 0; 
-    letter-spacing: -2px; 
+.card-mascota:hover { transform: translateY(-5px); }
+.card-mascota.activa { border-color: #00bfff; background: #f0f9ff; }
+.emoji-mascota { font-size: 3.5rem; display: block; margin-bottom: 10px; }
+
+.btn-select {
+    margin-top: 15px;
+    background: #e2e8f0;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
 }
 
-.text-gradient { 
-    background: linear-gradient(90deg, #6C63FF, #00D2FF); 
-    -webkit-background-clip: text; 
-    -webkit-text-fill-color: transparent; 
+.card-mascota.activa .btn-select { background: #00bfff; color: white; }
+
+/* Centro Zen */
+.centro-zen { text-align: center; padding: 50px 8%; background: #eef2f6; }
+.juegos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 30px; }
+
+.juego-card {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.hero-app p { 
-    font-size: 1.2rem; 
-    color: var(--text-gray); 
-    margin-bottom: 30px; 
-    line-height: 1.6; 
+.btn-game {
+    background: #00bfff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 15px;
 }
 
-.hero-mascot-wrapper { 
-    position: relative; 
-    display: inline-block; 
-    margin-bottom: 35px; 
+/* Animación Respiración */
+.circulo-respiracion-container { height: 140px; display: flex; align-items: center; justify-content: center; margin: 15px 0; }
+.circulo-respiracion {
+    width: 90px;
+    height: 90px;
+    background: #38bdf8;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    transition: transform 3s ease-in-out;
 }
 
-/* ESTILO DEFINITIVO DE LA IMAGEN CENTRAL DE LA MASCOTA */
-.hero-mascot { 
-    width: 250px; 
-    height: 250px; 
-    object-fit: contain; 
-    background-color: #ffffff; 
-    border-radius: 35px; 
-    box-shadow: 0 15px 35px rgba(108, 99, 255, 0.15); 
-    border: 5px solid white; 
-    padding: 15px;
-    display: block;
-    margin: 0 auto;
-    transition: transform 0.4s ease;
-}
-
-.hero-mascot:hover { 
-    transform: scale(1.05); 
-}
-
-.mascot-badge-tag { 
-    position: absolute; 
-    bottom: -12px; 
-    left: 50%; 
-    transform: translateX(-50%); 
-    background: var(--text-dark); 
-    color: white; 
-    padding: 6px 18px; 
-    border-radius: 20px; 
-    font-size: 0.85rem; 
-    font-weight: 700; 
-    white-space: nowrap; 
-    z-index: 10; 
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-.hero-actions { 
-    display: flex; 
-    justify-content: center; 
-    gap: 15px; 
-    flex-wrap: wrap; 
-}
-
-.btn-primary, .btn-secondary { 
-    padding: 16px 32px; 
-    border-radius: 40px; 
-    text-decoration: none; 
-    font-weight: 700; 
-    font-size: 1rem; 
-    transition: transform 0.2s, box-shadow 0.2s; 
-    border: none; 
-    cursor: pointer; 
-}
-
-.btn-primary { 
-    background: var(--text-dark); 
-    color: white; 
-}
-
-.btn-primary:hover { 
-    transform: translateY(-3px); 
-    box-shadow: 0 12px 25px rgba(0,0,0,0.15); 
-}
-
-.btn-secondary { 
-    background: white; 
-    color: var(--text-dark); 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-}
-
-/* --- 3. HEADERS Y SECCIONES --- */
-.section-header { text-align: center; margin-bottom: 40px; }
-.section-header h2 { font-size: 2.3rem; font-weight: 900; }
-.section-header p { color: var(--text-gray); font-size: 1.1rem; margin-top: 8px; }
-
-/* --- 4. SECCIÓN MASCOTAS --- */
-.mascots-section { padding: 60px 20px; max-width: 900px; margin: 0 auto; }
-.active-mascot-display { background: white; padding: 14px 25px; border-radius: 20px; text-align: center; font-size: 1.05rem; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid rgba(108, 99, 255, 0.2); }
-.active-mascot-display strong { color: var(--accent); }
-.mascots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
-.mascot-card { background: white; padding: 30px 20px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow-soft); border: 2px solid transparent; transition: transform 0.3s, border-color 0.3s; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
-.mascot-card:hover { transform: translateY(-5px); }
-.mascot-card.active { border-color: var(--accent); background: #F9F8FF; }
-
-/* ESTILO DE LA MINIATURA DE LA MASCOTA EN TARJETA */
-.mascot-img-box img { 
-    width: 90px; 
-    height: 90px; 
-    object-fit: contain; 
-    background-color: #ffffff; 
-    border-radius: 50%; 
-    border: 3px solid var(--accent); 
-    margin-bottom: 15px; 
-    padding: 8px;
-    display: block;
-}
-
-.mascot-emoji-box { font-size: 4rem; margin-bottom: 10px; }
-.mascot-card h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; }
-.mascot-role { font-size: 0.85rem; color: var(--accent); font-weight: 700; margin-bottom: 12px; }
-.btn-select-mascot { background: #E8E8ED; border: none; padding: 10px 18px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: 0.3s; margin-top: 15px; width: 100%;}
-.mascot-card.active .btn-select-mascot { background: var(--accent); color: white; }
-
-/* --- 5. CENTRO INTERACTIVO --- */
-.interactive-center { padding: 60px 20px; max-width: 1100px; margin: 0 auto; }
-.games-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
-.game-box { background: white; border-radius: var(--radius-lg); padding: 35px 25px; text-align: center; box-shadow: var(--shadow-soft); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
-.game-box h3 { font-size: 1.5rem; margin-bottom: 10px; color: var(--text-dark); }
-.game-box p { color: var(--text-gray); font-size: 0.95rem; margin-bottom: 25px; height: 40px;}
-.btn-game { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-weight: 700; cursor: pointer; transition: 0.3s; width: 80%;}
-.btn-game:hover { background: #5B21B6; transform: scale(1.05); }
-.btn-game-small { background: #E8E8ED; border: none; padding: 8px 15px; border-radius: 15px; font-weight: 700; cursor: pointer; }
-
-/* Respiración */
-.breathe-container { position: relative; width: 180px; height: 180px; margin: 0 auto 30px auto; display: flex; align-items: center; justify-content: center; }
-.circle-breathe { position: absolute; width: 100px; height: 100px; border-radius: 50%; background-color: var(--accent); transition: transform 4s ease-in-out, background-color 2s; opacity: 0.2; }
-#breathe-text { position: relative; z-index: 2; font-weight: 800; font-size: 0.95rem; color: var(--text-dark); text-align: center; }
+.circulo-respiracion.expandir { transform: scale(1.4); background: #818cf8; }
 
 /* Burbujas */
-.game-stats { display: flex; justify-content: space-between; width: 100%; margin-bottom: 20px; font-weight: 700; align-items: center;}
-.bubble-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; width: 100%; }
-.bubble { width: 100%; aspect-ratio: 1; background: linear-gradient(135deg, #00D2FF, #3A7BD5); border-radius: 50%; cursor: pointer; box-shadow: inset -3px -3px 6px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.1); transition: transform 0.1s; }
-.bubble:hover { transform: scale(1.1); }
-.bubble.popped { background: #E5E5EA; box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1); transform: scale(0.85); opacity: 0.5; }
+.contenedor-burbujas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; min-height: 100px; }
+.burbuja {
+    width: 45px;
+    height: 45px;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(0, 191, 255, 0.5));
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0, 191, 255, 0.2);
+    transition: transform 0.1s;
+}
+.burbuja:hover { transform: scale(1.1); }
+.burbuja.reventada { visibility: hidden; opacity: 0; }
 
 /* Memoria */
-.memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
-.memory-card { aspect-ratio: 1; background: #E8E8ED; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; transition: background 0.3s, transform 0.2s; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
-.memory-card:hover { transform: scale(1.05); }
-.memory-card.flipped, .memory-card.matched { background: var(--accent); color: white; }
-.emoji-hidden { opacity: 0; transition: opacity 0.2s; }
-.memory-card.matched { background: #10B981; }
-
-/* --- 6. GALERÍA --- */
-.high-res-gallery { padding: 60px 20px; max-width: 1100px; margin: 0 auto; }
-.photo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; }
-.photo-card { position: relative; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-soft); height: 280px; }
-.photo-card img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; display: block; }
-.photo-card:hover img { transform: scale(1.08); }
-.photo-overlay { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 20px 20px 20px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); color: white; font-weight: 800; font-size: 1.2rem; transform: translateY(100%); transition: transform 0.3s; }
-.photo-card:hover .photo-overlay { transform: translateY(0); }
-
-/* --- 7. EQUIPO Y CONTACTO --- */
-.team-section { text-align: center; padding: 60px 20px; }
-.team-section h2 { font-size: 2.2rem; font-weight: 800; }
-.school-name { color: var(--text-gray); font-size: 1.1rem; margin-top: 5px; }
-.tags-container { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin: 30px 0; }
-.team-tag { background: white; padding: 12px 24px; border-radius: 30px; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #E5E5EA;}
-.asesora { color: var(--text-dark); font-size: 1.05rem; }
-
-.contact-modern { padding: 50px 20px 100px 20px; display: flex; justify-content: center; }
-.contact-card { background: white; padding: 50px 40px; border-radius: var(--radius-lg); text-align: center; box-shadow: var(--shadow-soft); max-width: 600px; width: 100%; }
-.contact-card h2 { font-size: 2.2rem; margin-bottom: 10px; font-weight: 900; }
-.contact-card p { color: var(--text-gray); margin-bottom: 30px; }
-.clean-form { display: flex; flex-direction: column; gap: 15px; margin-bottom: 35px; }
-.clean-form input, .clean-form textarea { width: 100%; padding: 15px 20px; border-radius: 15px; border: 1px solid #E5E5EA; background: #FAF9FB; font-size: 1rem; outline: none; }
-.clean-form input:focus, .clean-form textarea:focus { border-color: var(--accent); }
-.closing-phrase { font-size: 1.4rem; font-weight: 800; color: var(--accent); font-style: italic; }
-
-.footer-app { text-align: center; padding: 40px 20px; background: white; color: var(--text-gray); font-size: 0.9rem; }
-
-@media (max-width: 768px) {
-    .hero-app h1 { font-size: 2.8rem; }
-    .nav-links { display: none; }
-    .games-layout { grid-template-columns: 1fr; }
-    .photo-grid { grid-template-columns: 1fr; }
-    .floating-nav { width: 95%; padding: 10px 15px; }
+.memoria-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
+.carta-memoria {
+    width: 50px;
+    height: 50px;
+    background: #00bfff;
+    color: white;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
 }
-    
+
+/* Galería y Footer */
+.galeria-seccion, .equipo-seccion, .contacto-seccion { text-align: center; padding: 50px 8%; }
+.galeria-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.galeria-item img { width: 250px; height: 160px; object-fit: cover; border-radius: 15px; }
+
+.lista-equipo { list-style: none; margin: 15px 0; }
+.form-contacto { display: flex; flex-direction: column; gap: 12px; max-width: 400px; margin: 20px auto 0; }
+.form-contacto input, .form-contacto textarea { padding: 12px; border: 1px solid #ccc; border-radius: 10px; }
+
+footer { background: #1e293b; color: white; text-align: center; padding: 20px; margin-top: 40px; }

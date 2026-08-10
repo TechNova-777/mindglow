@@ -5,293 +5,174 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindGlow | Tu Asistente de Salud Mental</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="fade-in">
+<body>
 
-    <nav class="floating-nav">
+    <header class="navbar">
         <div class="logo-container">
-            <img src="image_3dff40.png" alt="Logo MindGlow" class="nav-logo-img">
+            <span class="logo-icon">💡</span>
             <span class="logo-text">MindGlow</span>
         </div>
-        <ul class="nav-links">
-            <li><a href="#inicio">Inicio</a></li>
-            <li><a href="#mascotas">Mascota</a></li>
-            <li><a href="#interactivo">Centro Zen</a></li>
-            <li><a href="#galeria">Galería</a></li>
-            <li><a href="#equipo">Equipo</a></li>
-        </ul>
-        <a href="#contacto" class="btn-contact-nav">Contáctanos</a>
-    </nav>
+        <nav>
+            <ul>
+                <li><a href="#inicio">Inicio</a></li>
+                <li><a href="#mascotas">Mascota</a></li>
+                <li><a href="#interactivo">Centro Zen</a></li>
+                <li><a href="#galeria">Galería</a></li>
+                <li><a href="#equipo">Equipo</a></li>
+            </ul>
+        </nav>
+        <a href="#contacto" class="btn-contacto">Contáctanos</a>
+    </header>
 
-    <main>
-        <section id="inicio" class="hero-app">
-            <div class="hero-glow-bg"></div>
-            
-            <a href="https://www.deperu.com/educacion/educacion-primaria/escuela-0162-san-jose-obrero-san-juan-de-lurigancho-57296" target="_blank" class="school-link-badge">
-                📍 I.E. 0162 San José Obrero - Ficha Institucional ↗
-            </a>
-
-            <h1>Cuida tu mente.<br><span class="text-gradient">Mejora tu vida.</span></h1>
-            <p class="hero-subtitle">El primer asistente virtual diseñado en San José Obrero para ayudarte a desconectar, respirar y encontrar tu balance diario.</p>
-            
-            <div class="hero-mascot-wrapper">
-                <img src="image_3dff40.png" alt="Mascota Oficial MindGlow" class="hero-mascot">
-                <span class="mascot-badge-tag">Glowy · Tu guía Zen</span>
-            </div>
-
-            <div class="hero-actions">
+    <section id="inicio" class="hero">
+        <div class="hero-content">
+            <span class="badge">📍 I.E. 0162 San José Obrero</span>
+            <h1>Cuida tu mente.<br><span class="highlight">Mejora tu vida.</span></h1>
+            <p>El primer asistente virtual diseñado para ayudarte a desconectar, respirar y encontrar tu balance diario.</p>
+            <div class="hero-buttons">
                 <a href="#interactivo" class="btn-primary">🎮 Ir al Centro Zen</a>
                 <a href="#mascotas" class="btn-secondary">🐾 Elegir Mascota</a>
             </div>
-        </section>
+        </div>
+        <div class="hero-image">
+            <div class="mascota-display">
+                <span id="hero-avatar" class="avatar-large">🧠</span>
+                <p id="hero-mascota-nombre" class="mascota-tag">Glowy · Tu guía Zen</p>
+            </div>
+        </div>
+    </section>
 
-        <section id="mascotas" class="mascots-section">
-            <div class="section-header">
-                <h2>🐾 Tu Compañero de Bienestar</h2>
-                <p>Selecciona quién te acompañará en tus sesiones de relajación.</p>
+    <section class="mood-tracker">
+        <h2>¿Cómo te sientes hoy?</h2>
+        <div class="emociones-grid">
+            <button onclick="registrarEmocion('feliz', '😄')">😄 Feliz</button>
+            <button onclick="registrarEmocion('tranquilo', '🧘')">🧘 Calmo</button>
+            <button onclick="registrarEmocion('estresado', '😰')">😰 Estresado</button>
+            <button onclick="registrarEmocion('cansado', '🥱')">🥱 Cansado</button>
+        </div>
+        <p id="mensaje-emocion" class="mensaje-emocion">Selecciona una emoción para recibir un consejo de tu mascota.</p>
+    </section>
+
+    <section id="mascotas" class="seccion-mascotas">
+        <h2>🐾 Tu Compañero de Bienestar</h2>
+        <p>Selecciona quién te acompañará en tus sesiones de relajación.</p>
+        
+        <p class="companero-actual">Compañero Actual: <strong id="nombre-activo">Glowy (Cerebrito Zen)</strong></p>
+
+        <div class="mascotas-cards">
+            <div class="card-mascota activa" id="card-glowy" onclick="seleccionarMascota('Glowy', 'Cerebrito Zen', '🧠', 'card-glowy')">
+                <span class="emoji-mascota">🧠</span>
+                <h3>Glowy</h3>
+                <p>El Cerebrito Zen</p>
+                <button class="btn-select">Seleccionado</button>
             </div>
 
-            <div class="active-mascot-display" id="active-mascot-banner">
-                <span>Compañero Actual: <strong id="selected-mascot-name">Glowy (Cerebrito Zen)</strong></span>
+            <div class="card-mascota" id="card-zenny" onclick="seleccionarMascota('Zenny', 'El Panda Calmo', '🐼', 'card-zenny')">
+                <span class="emoji-mascota">🐼</span>
+                <h3>Zenny</h3>
+                <p>El Panda Calmo</p>
+                <button class="btn-select">Elegir a Zenny</button>
             </div>
 
-            <div class="mascots-grid">
-                <div class="mascot-card active" onclick="selectMascot('Glowy', 'El Cerebrito Zen', this)">
-                    <div class="mascot-img-box">
-                        <img src="image_3dff40.png" alt="Glowy">
+            <div class="card-mascota" id="card-lumina" onclick="seleccionarMascota('Lumina', 'La Zorrilla Sabia', '🦊', 'card-lumina')">
+                <span class="emoji-mascota">🦊</span>
+                <h3>Lumina</h3>
+                <p>La Zorrilla Sabia</p>
+                <button class="btn-select">Elegir a Lumina</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="interactivo" class="centro-zen">
+        <h2>🎮 Centro Interactivo</h2>
+        <p>Herramientas diseñadas para calmar tu mente en minutos.</p>
+
+        <div class="juegos-grid">
+            
+            <div class="juego-card">
+                <h3>🌬️ Respiración Guiada</h3>
+                <p>Sigue el círculo para calmar la ansiedad.</p>
+                <div class="circulo-respiracion-container">
+                    <div id="circulo-respiracion" class="circulo-respiracion">
+                        <span id="texto-respiracion">Inhala</span>
                     </div>
-                    <h3>Glowy</h3>
-                    <span class="mascot-role">El Cerebrito Zen</span>
-                    <button class="btn-select-mascot">Seleccionado</button>
                 </div>
-                <div class="mascot-card" onclick="selectMascot('Zenny', 'El Panda Calmo', this)">
-                    <div class="mascot-emoji-box">🐼</div>
-                    <h3>Zenny</h3>
-                    <span class="mascot-role">El Panda Calmo</span>
-                    <button class="btn-select-mascot">Elegir a Zenny</button>
-                </div>
-                <div class="mascot-card" onclick="selectMascot('Lumina', 'La Zorrilla Sabia', this)">
-                    <div class="mascot-emoji-box">🦊</div>
-                    <h3>Lumina</h3>
-                    <span class="mascot-role">La Zorrilla Sabia</span>
-                    <button class="btn-select-mascot">Elegir a Lumina</button>
-                </div>
-            </div>
-        </section>
-
-        <section id="interactivo" class="interactive-center">
-            <div class="section-header">
-                <h2>🎮 Centro Interactivo</h2>
-                <p>Tres herramientas diseñadas para calmar tu mente en minutos.</p>
+                <button id="btn-respiracion" onclick="toggleRespiracion()" class="btn-game">Iniciar Ejercicio</button>
             </div>
 
-            <div class="games-layout">
-                <div class="game-box breathing-box premium-card">
-                    <h3>🌬️ Respiración Guiada</h3>
-                    <p>Sigue el círculo para calmar la ansiedad.</p>
-                    <div class="breathe-container">
-                        <div class="circle-breathe" id="circle-breathe"></div>
-                        <span id="breathe-text">Presiona Iniciar</span>
+            <div class="juego-card">
+                <h3>🫧 Burbujas Anti-estrés</h3>
+                <p>Libera tensión haciendo clic. Puntos: <strong id="puntos">0</strong></p>
+                <div class="contenedor-burbujas" id="contenedor-burbujas">
+                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
+                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
+                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
+                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
+                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
+                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
+                </div>
+                <button onclick="reiniciarBurbujas()" class="btn-game">Reiniciar Burbujas</button>
+            </div>
+
+            <div class="juego-card">
+                <h3>🧘 Memoria Zen</h3>
+                <p>Encuentra las parejas para enfocar tu mente.</p>
+                <div class="memoria-grid" id="memoria-grid">
                     </div>
-                    <button id="btn-breathe" class="btn-game">Iniciar Ejercicio</button>
-                </div>
-
-                <div class="game-box bubble-box premium-card">
-                    <h3>🫧 Burbujas Anti-estrés</h3>
-                    <p>Libera tensión haciendo clic rápido.</p>
-                    <div class="game-stats">
-                        <span>Puntos: <strong id="score">0</strong></span>
-                        <button id="reset-game" class="btn-game-small">Reiniciar</button>
-                    </div>
-                    <div class="bubble-grid" id="bubble-grid"></div>
-                </div>
-
-                <div class="game-box memory-box premium-card">
-                    <h3>🧘 Memoria Zen</h3>
-                    <p>Encuentra parejas para mejorar tu enfoque.</p>
-                    <div class="memory-grid" id="memory-grid"></div>
-                    <button id="reset-memory" class="btn-game" style="margin-top: 20px;">Mezclar Cartas</button>
-                </div>
+                <button onclick="iniciarJuegoMemoria()" class="btn-game">Mezclar Cartas</button>
             </div>
-        </section>
 
-        <section id="galeria" class="high-res-gallery">
-            <div class="section-header">
-                <h2>📸 Galería MindGlow</h2>
-                <p>Nuestra visión de tecnología enfocada en la salud mental.</p>
-            </div>
-            <div class="photo-grid">
-                <div class="photo-card">
-                    <img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&auto=format&fit=crop" alt="Meditación y Calma">
-                    <div class="photo-overlay"><span>Enfoque y Calma</span></div>
-                </div>
-                <div class="photo-card">
-                    <img src="https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=800&auto=format&fit=crop" alt="Salud Mental App">
-                    <div class="photo-overlay"><span>Interfaz Limpia</span></div>
-                </div>
-                <div class="photo-card">
-                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=800&auto=format&fit=crop" alt="Estudiantes">
-                    <div class="photo-overlay"><span>Trabajo en Equipo</span></div>
-                </div>
-            </div>
-        </section>
+        </div>
+    </section>
 
-        <section id="equipo" class="team-section">
-            <h2>Equipo "Impulso Mental"</h2>
-            <p class="school-name">I.E. 0162 San José Obrero · Categoría B</p>
-            <div class="tags-container">
-                <span class="team-tag">Clara Soto</span>
-                <span class="team-tag">Edison Pineda</span>
-                <span class="team-tag">Camila Carhuaz</span>
-                <span class="team-tag">Jack Bryan Perez</span>
-                <span class="team-tag">Andrea Rosas</span>
+    <section id="galeria" class="galeria-seccion">
+        <h2>📸 Galería MindGlow</h2>
+        <div class="galeria-grid">
+            <div class="galeria-item">
+                <img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=600&auto=format&fit=crop" alt="Meditación">
+                <p>Enfoque y Calma</p>
             </div>
-            <p class="asesora"><strong>Docente Asesora:</strong> Ketty Liz Fabian Ribera</p>
-        </section>
-
-        <section id="contacto" class="contact-modern">
-            <div class="contact-card premium-card">
-                <h2>¿Listo para mejorar tu día?</h2>
-                <p>Déjanos tus comentarios o dudas sobre el proyecto.</p>
-                <form class="clean-form" onsubmit="event.preventDefault(); alert('¡Gracias! Hemos recibido tu mensaje.');">
-                    <input type="text" placeholder="Tu Nombre" required>
-                    <input type="email" placeholder="Tu Correo Electrónico" required>
-                    <textarea placeholder="Escribe tu mensaje..." rows="4" required></textarea>
-                    <button type="submit" class="btn-primary" style="width: 100%;">Enviar Mensaje</button>
-                </form>
-                <div class="closing-phrase">"Tu salud mental no es un lujo, es una prioridad."</div>
+            <div class="galeria-item">
+                <img src="https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=600&auto=format&fit=crop" alt="Interfaz">
+                <p>Interfaz Limpia</p>
             </div>
-        </section>
-    </main>
+            <div class="galeria-item">
+                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format&fit=crop" alt="Equipo">
+                <p>Trabajo en Equipo</p>
+            </div>
+        </div>
+    </section>
 
-    <footer class="footer-app">
+    <section id="equipo" class="equipo-seccion">
+        <h2>Equipo "Impulso Mental"</h2>
+        <p>I.E. 0162 San José Obrero · Categoría B</p>
+        <ul class="lista-equipo">
+            <li>Clara Soto</li>
+            <li>Edison Pineda</li>
+            <li>Camila Carhuaz</li>
+            <li>Jack Bryan Perez</li>
+            <li>Andrea Rosas</li>
+        </ul>
+        <p class="docente"><strong>Docente Asesora:</strong> Ketty Liz Fabian Ribera</p>
+    </section>
+
+    <section id="contacto" class="contacto-seccion">
+        <h2>¿Listo para mejorar tu día?</h2>
+        <p>"Tu salud mental no es un lujo, es una prioridad."</p>
+        <form onsubmit="enviarFormulario(event)" class="form-contacto">
+            <input type="text" placeholder="Tu Nombre" required>
+            <input type="email" placeholder="Tu Correo Electrónico" required>
+            <textarea placeholder="Escribe tu mensaje o sugerencia..." rows="4" required></textarea>
+            <button type="submit" class="btn-primary">Enviar Mensaje</button>
+        </form>
+    </section>
+
+    <footer>
         <p>MindGlow © 2026. Proyecto "Mente Sana" - I.E. 0162 San José Obrero</p>
     </footer>
 
-    <script>
-        // MASCOTAS
-        function selectMascot(name, role, cardElement) {
-            document.querySelectorAll('.mascot-card').forEach(card => {
-                card.classList.remove('active');
-                card.querySelector('.btn-select-mascot').textContent = 'Elegir a ' + card.querySelector('h3').textContent;
-            });
-            cardElement.classList.add('active');
-            cardElement.querySelector('.btn-select-mascot').textContent = 'Seleccionado';
-            document.getElementById('selected-mascot-name').textContent = name + ' (' + role + ')';
-        }
-
-        // RESPIRACIÓN
-        const btnBreathe = document.getElementById('btn-breathe');
-        const circleBreathe = document.getElementById('circle-breathe');
-        const textBreathe = document.getElementById('breathe-text');
-        let isBreathing = false;
-
-        btnBreathe.addEventListener('click', () => {
-            if(isBreathing) return;
-            isBreathing = true;
-            btnBreathe.textContent = 'Respirando...';
-            textBreathe.textContent = 'Inhala profundamente...';
-            circleBreathe.style.transform = 'scale(1.5)';
-            circleBreathe.style.backgroundColor = '#10B981'; 
-
-            setTimeout(() => {
-                textBreathe.textContent = 'Mantén la respiración...';
-                circleBreathe.style.backgroundColor = '#6C63FF'; 
-            }, 4000);
-
-            setTimeout(() => {
-                textBreathe.textContent = 'Exhala lentamente...';
-                circleBreathe.style.transform = 'scale(1)';
-                circleBreathe.style.backgroundColor = '#00D2FF'; 
-            }, 7000);
-
-            setTimeout(() => {
-                textBreathe.textContent = '¡Excelente! ¿Otra vez?';
-                btnBreathe.textContent = 'Iniciar Ejercicio';
-                circleBreathe.style.backgroundColor = '#6C63FF';
-                isBreathing = false;
-            }, 11000);
-        });
-
-        // BURBUJAS
-        const bubbleGrid = document.getElementById('bubble-grid');
-        const scoreElement = document.getElementById('score');
-        const resetButton = document.getElementById('reset-game');
-        let score = 0;
-
-        function createBubbles() {
-            bubbleGrid.innerHTML = '';
-            score = 0;
-            scoreElement.textContent = score;
-            for (let i = 0; i < 20; i++) {
-                const bubble = document.createElement('div');
-                bubble.classList.add('bubble');
-                bubble.addEventListener('click', () => {
-                    if (!bubble.classList.contains('popped')) {
-                        bubble.classList.add('popped');
-                        score++;
-                        scoreElement.textContent = score;
-                    }
-                });
-                bubbleGrid.appendChild(bubble);
-            }
-        }
-        resetButton.addEventListener('click', createBubbles);
-        createBubbles();
-
-        // MEMORIA
-        const memoryGrid = document.getElementById('memory-grid');
-        const resetMemoryBtn = document.getElementById('reset-memory');
-        const emojis = ['🌿', '🌿', '🧘', '🧘', '✨', '✨', '🧠', '🧠'];
-        let firstCard = null, secondCard = null, lockBoard = false;
-
-        function initMemoryGame() {
-            memoryGrid.innerHTML = '';
-            let shuffled = emojis.sort(() => 0.5 - Math.random());
-            shuffled.forEach(emoji => {
-                const card = document.createElement('div');
-                card.classList.add('memory-card');
-                card.dataset.emoji = emoji;
-                card.innerHTML = `<span class="emoji-hidden">${emoji}</span>`;
-                card.addEventListener('click', flipCard);
-                memoryGrid.appendChild(card);
-            });
-        }
-
-        function flipCard() {
-            if (lockBoard || this === firstCard || this.classList.contains('matched')) return;
-            this.classList.add('flipped');
-            this.querySelector('.emoji-hidden').style.opacity = '1';
-
-            if (!firstCard) return firstCard = this;
-            secondCard = this;
-            checkForMatch();
-        }
-
-        function checkForMatch() {
-            firstCard.dataset.emoji === secondCard.dataset.emoji ? disableCards() : unflipCards();
-        }
-
-        function disableCards() {
-            firstCard.classList.add('matched');
-            secondCard.classList.add('matched');
-            [firstCard, secondCard, lockBoard] = [null, null, false];
-        }
-
-        function unflipCards() {
-            lockBoard = true;
-            setTimeout(() => {
-                firstCard.classList.remove('flipped');
-                firstCard.querySelector('.emoji-hidden').style.opacity = '0';
-                secondCard.classList.remove('flipped');
-                secondCard.querySelector('.emoji-hidden').style.opacity = '0';
-                [firstCard, secondCard, lockBoard] = [null, null, false];
-            }, 1000);
-        }
-
-        resetMemoryBtn.addEventListener('click', initMemoryGame);
-        initMemoryGame();
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
