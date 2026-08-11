@@ -1,306 +1,2097 @@
-/* 1. Fuente Premium */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
 }
 
-/* 2. EL FONDO ANIMADO (Intacto, como te gustó) */
+:root {
+    --bg: #f5f6fa;
+    --white: #ffffff;
+    --black: #111111;
+    --text: #171717;
+    --muted: #777b86;
+
+    --purple: #667eea;
+    --purple2: #764ba2;
+
+    --green: #23d5ab;
+
+    --border: #e9e9ee;
+
+    --shadow:
+        0 20px 60px rgba(0,0,0,.08);
+
+    --radius: 24px;
+}
+
+html,
 body {
-    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: #1a1a1a;
+    width: 100%;
+    height: 100%;
 }
 
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+body {
 
-/* 3. Contenedor: Sólido, Blanco y Elegante */
-#chat-container {
-    width: 92%;
-    max-width: 420px;
-    height: 85vh;
-    background: #ffffff; /* Blanco puro, sin transparencias raras */
-    border-radius: 24px;
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-    display: flex;
-    flex-direction: column;
+    font-family: 'Inter', sans-serif;
+
+    background:
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(102,126,234,.15),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 90% 90%,
+            rgba(35,213,171,.12),
+            transparent 30%
+        ),
+        #f5f6fa;
+
+    color: var(--text);
+
     overflow: hidden;
 }
 
-/* 4. Cabecera Limpia */
-#chat-header {
-    background: #ffffff;
-    padding: 16px 20px;
-    border-bottom: 1px solid #f0f0f0;
-    z-index: 10;
+
+/* =========================================================
+   AMBIENTE
+========================================================= */
+
+.ambient {
+    position: fixed;
+    width: 500px;
+    height: 500px;
+
+    border-radius: 50%;
+
+    filter: blur(100px);
+
+    opacity: .25;
+
+    pointer-events: none;
 }
 
-/* Si estás usando la estructura con Avatar */
-.header-info {
+.ambient-1 {
+    background: #667eea;
+    top: -250px;
+    left: -200px;
+}
+
+.ambient-2 {
+    background: #23d5ab;
+    right: -250px;
+    bottom: -250px;
+}
+
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app-shell {
+
+    width: 100%;
+    height: 100vh;
+
     display: flex;
+
+    padding: 18px;
+
+    position: relative;
+}
+
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.sidebar {
+
+    width: 250px;
+
+    background:
+        rgba(255,255,255,.88);
+
+    backdrop-filter: blur(25px);
+
+    border: 1px solid rgba(255,255,255,.9);
+
+    border-radius: 28px;
+
+    padding: 24px 16px;
+
+    display: flex;
+    flex-direction: column;
+
+    box-shadow: var(--shadow);
+
+    z-index: 100;
+}
+
+
+.brand {
+
+    display: flex;
+
     align-items: center;
+
+    gap: 12px;
+
+    padding: 0 10px 25px;
+}
+
+.brand-logo {
+
+    width: 44px;
+    height: 44px;
+
+    border-radius: 15px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: white;
+
+    font-size: 22px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #667eea,
+            #764ba2
+        );
+
+    box-shadow:
+        0 10px 25px rgba(102,126,234,.3);
+}
+
+.brand strong {
+
+    display: block;
+
+    font-size: 16px;
+}
+
+.brand span {
+
+    display: block;
+
+    font-size: 10px;
+
+    color: var(--muted);
+
+    margin-top: 3px;
+}
+
+
+.close-menu {
+
+    display: none;
+
+    border: none;
+
+    background: none;
+
+    font-size: 22px;
+}
+
+
+/* =========================================================
+   NAV
+========================================================= */
+
+.main-nav {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+.nav-item {
+
+    width: 100%;
+
+    border: none;
+
+    background: transparent;
+
+    padding: 12px 14px;
+
+    border-radius: 14px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    color: #777;
+
+    font-family: inherit;
+
+    font-size: 14px;
+
+    cursor: pointer;
+
+    transition: .25s;
+}
+
+.nav-item i {
+
+    font-size: 20px;
+}
+
+.nav-item:hover {
+
+    background: #f5f5fa;
+
+    color: var(--purple);
+}
+
+.nav-item.active {
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(102,126,234,.12),
+            rgba(118,75,162,.08)
+        );
+
+    color: var(--purple);
+
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   XP
+========================================================= */
+
+.sidebar-bottom {
+
+    margin-top: auto;
+}
+
+.xp-card {
+
+    background: #f7f7fb;
+
+    border-radius: 18px;
+
+    padding: 15px;
+}
+
+.xp-top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    font-size: 11px;
+
+    margin-bottom: 9px;
+}
+
+.xp-bar {
+
+    height: 6px;
+
+    background: #e5e5ed;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+}
+
+.xp-bar div {
+
+    height: 100%;
+
+    width: 0%;
+
+    background:
+        linear-gradient(
+            90deg,
+            #667eea,
+            #23d5ab
+        );
+
+    border-radius: inherit;
+
+    transition: width .5s;
+}
+
+.xp-card small {
+
+    display: block;
+
+    margin-top: 9px;
+
+    color: #888;
+
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.main-content {
+
+    flex: 1;
+
+    margin-left: 18px;
+
+    min-width: 0;
+
+    height: 100%;
+
+    background:
+        rgba(255,255,255,.82);
+
+    backdrop-filter: blur(30px);
+
+    border-radius: 28px;
+
+    border: 1px solid rgba(255,255,255,.9);
+
+    box-shadow: var(--shadow);
+
+    overflow: hidden;
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+
+/* =========================================================
+   TOPBAR
+========================================================= */
+
+.topbar {
+
+    height: 76px;
+
+    padding: 0 26px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    border-bottom: 1px solid var(--border);
+
+    background:
+        rgba(255,255,255,.75);
+
+    backdrop-filter: blur(20px);
+
+    flex-shrink: 0;
+}
+
+.menu-btn {
+
+    display: none;
+
+    border: none;
+
+    background: none;
+
+    font-size: 24px;
+
+    cursor: pointer;
+}
+
+.top-title span {
+
+    font-size: 15px;
+
+    font-weight: 700;
+}
+
+.top-title small {
+
+    display: block;
+
+    color: #999;
+
+    font-size: 10px;
+
+    margin-top: 3px;
+}
+
+.top-actions {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+}
+
+.top-btn {
+
+    width: 40px;
+    height: 40px;
+
+    border-radius: 50%;
+
+    border: 1px solid var(--border);
+
+    background: white;
+
+    cursor: pointer;
+
+    color: #555;
+}
+
+.profile-btn {
+
+    width: 40px;
+    height: 40px;
+
+    border-radius: 50%;
+
+    border: none;
+
+    background:
+        linear-gradient(
+            135deg,
+            #667eea,
+            #764ba2
+        );
+
+    color: white;
+
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.content-area {
+
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 38px;
+
+}
+
+.content-area::-webkit-scrollbar {
+
+    width: 6px;
+}
+
+.content-area::-webkit-scrollbar-thumb {
+
+    background: #ddd;
+
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   SECTIONS
+========================================================= */
+
+.page-section {
+
+    display: none;
+
+    animation: sectionIn .35s ease;
+}
+
+.page-section.active {
+
+    display: block;
+}
+
+@keyframes sectionIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.hero {
+
+    min-height: 330px;
+
+    border-radius: 30px;
+
+    padding: 48px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    overflow: hidden;
+
+    position: relative;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff,
+            #f5f3ff
+        );
+
+    border: 1px solid #eee;
+
+    box-shadow: 0 15px 45px rgba(0,0,0,.04);
+}
+
+.hero-content {
+
+    max-width: 620px;
+
+    position: relative;
+
+    z-index: 2;
+}
+
+.eyebrow {
+
+    font-size: 10px;
+
+    letter-spacing: 1.5px;
+
+    font-weight: 700;
+
+    color: var(--purple);
+}
+
+.hero h1 {
+
+    font-size: clamp(34px, 5vw, 62px);
+
+    line-height: 1.05;
+
+    margin: 15px 0;
+
+    letter-spacing: -2px;
+}
+
+.hero h1 span {
+
+    display: block;
+
+    background:
+        linear-gradient(
+            90deg,
+            #667eea,
+            #764ba2
+        );
+
+    -webkit-background-clip: text;
+
+    -webkit-text-fill-color: transparent;
+}
+
+.hero p {
+
+    color: #70747d;
+
+    line-height: 1.7;
+
+    max-width: 560px;
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.hero-actions {
+
+    display: flex;
+
+    gap: 10px;
+
+    margin-top: 25px;
+
+    flex-wrap: wrap;
+}
+
+.primary-btn,
+.secondary-btn {
+
+    border: none;
+
+    border-radius: 14px;
+
+    padding: 12px 18px;
+
+    font-family: inherit;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: .25s;
+}
+
+.primary-btn {
+
+    color: white;
+
+    background:
+        linear-gradient(
+            135deg,
+            #667eea,
+            #764ba2
+        );
+
+    box-shadow:
+        0 10px 25px rgba(102,126,234,.22);
+}
+
+.primary-btn:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 14px 30px rgba(102,126,234,.3);
+}
+
+.secondary-btn {
+
+    background: white;
+
+    color: #444;
+
+    border: 1px solid #e6e6ea;
+}
+
+.secondary-btn:hover {
+
+    transform: translateY(-2px);
+
+    border-color: #ccc;
+}
+
+
+/* =========================================================
+   ORB
+========================================================= */
+
+.hero-orb {
+
+    width: 260px;
+    height: 260px;
+
+    position: relative;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+}
+
+.orb-core {
+
+    width: 100px;
+    height: 100px;
+
+    border-radius: 50%;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: white;
+
+    font-size: 35px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #667eea,
+            #764ba2
+        );
+
+    box-shadow:
+        0 20px 60px rgba(102,126,234,.35);
+}
+
+.orb-ring {
+
+    position: absolute;
+
+    border: 1px solid rgba(102,126,234,.18);
+
+    border-radius: 50%;
+
+    animation: orbRotate 12s linear infinite;
+}
+
+.ring-one {
+
+    width: 180px;
+    height: 180px;
+}
+
+.ring-two {
+
+    width: 250px;
+    height: 250px;
+
+    animation-direction: reverse;
+    animation-duration: 18s;
+}
+
+@keyframes orbRotate {
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* =========================================================
+   HEADINGS
+========================================================= */
+
+.section-heading {
+
+    margin: 38px 0 18px;
+}
+
+.section-heading span {
+
+    font-size: 10px;
+
+    color: var(--purple);
+
+    font-weight: 700;
+
+    letter-spacing: 1.5px;
+}
+
+.section-heading h2 {
+
+    margin-top: 5px;
+
+    font-size: 25px;
+}
+
+
+/* =========================================================
+   FEATURE CARDS
+========================================================= */
+
+.feature-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 14px;
+}
+
+.feature-card {
+
+    position: relative;
+
+    text-align: left;
+
+    border: 1px solid #ececf1;
+
+    background: white;
+
+    border-radius: 22px;
+
+    padding: 20px;
+
+    cursor: pointer;
+
+    transition: .3s;
+
+    font-family: inherit;
+}
+
+.feature-card:hover {
+
+    transform: translateY(-5px);
+
+    box-shadow:
+        0 15px 35px rgba(0,0,0,.08);
+}
+
+.feature-icon {
+
+    width: 45px;
+    height: 45px;
+
+    border-radius: 14px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 22px;
+
+    margin-bottom: 25px;
+}
+
+.purple .feature-icon {
+
+    color: #667eea;
+    background: #eef0ff;
+}
+
+.green .feature-icon {
+
+    color: #20ae8d;
+    background: #e8faf5;
+}
+
+.blue .feature-icon {
+
+    color: #3989d8;
+    background: #eaf4ff;
+}
+
+.orange .feature-icon {
+
+    color: #ed8a42;
+    background: #fff2e7;
+}
+
+.feature-card h3 {
+
+    font-size: 15px;
+
+    margin-bottom: 7px;
+}
+
+.feature-card p {
+
+    font-size: 12px;
+
+    color: #888;
+
+    line-height: 1.5;
+}
+
+.card-arrow {
+
+    position: absolute;
+
+    top: 20px;
+
+    right: 20px;
+
+    color: #aaa;
+}
+
+
+/* =========================================================
+   DAILY
+========================================================= */
+
+.daily-card {
+
+    margin-top: 20px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 18px;
+
+    padding: 20px;
+
+    border-radius: 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #111,
+            #252525
+        );
+
+    color: white;
+}
+
+.daily-icon {
+
+    width: 48px;
+    height: 48px;
+
+    border-radius: 15px;
+
+    background: rgba(255,255,255,.1);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 23px;
+}
+
+.daily-card span {
+
+    font-size: 9px;
+
+    color: #aaa;
+
+    letter-spacing: 1.3px;
+}
+
+.daily-card h3 {
+
+    font-size: 15px;
+
+    margin: 5px 0;
+}
+
+.daily-card p {
+
+    color: #aaa;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   PAGE HEADER
+========================================================= */
+
+.page-header {
+
+    margin-bottom: 25px;
+}
+
+.page-header h1 {
+
+    font-size: 38px;
+
+    margin: 7px 0;
+}
+
+.page-header p {
+
+    color: #7b7d84;
+
+    max-width: 650px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   ORIGINAL CHAT
+========================================================= */
+
+#chat-container {
+
+    width: 100%;
+
+    max-width: 720px;
+
+    height: 650px;
+
+    margin: auto;
+
+    background: #fff;
+
+    border-radius: 28px;
+
+    overflow: hidden;
+
+    border: 1px solid #ececf1;
+
+    box-shadow:
+        0 20px 50px rgba(0,0,0,.07);
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+#chat-header {
+
+    padding: 16px 20px;
+
+    background: white;
+
+    border-bottom: 1px solid #eee;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+}
+
+.header-info {
+
+    display: flex;
+
+    align-items: center;
+
     gap: 12px;
 }
 
 .ai-avatar {
-    width: 40px;
-    height: 40px;
-    background: #000000;
+
+    width: 42px;
+    height: 42px;
+
     border-radius: 50%;
+
     display: flex;
+
     align-items: center;
     justify-content: center;
+
     color: white;
-    font-size: 1.2rem;
+
+    background:
+        linear-gradient(
+            135deg,
+            #667eea,
+            #764ba2
+        );
+
     position: relative;
+
+    box-shadow:
+        0 8px 20px rgba(102,126,234,.25);
 }
 
 .status-dot {
+
     width: 10px;
     height: 10px;
-    background-color: #25D366; /* Verde tipo WhatsApp */
+
+    background: #23d5ab;
+
     border: 2px solid white;
+
     border-radius: 50%;
+
     position: absolute;
+
     bottom: 0;
     right: 0;
 }
 
 .header-text h1 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #1a1a1a;
+
+    font-size: 16px;
+
+    margin: 0;
 }
 
-.header-text .status-text {
-    font-size: 0.75rem;
-    color: #666;
+.status-text {
+
+    color: #888;
+
+    font-size: 11px;
 }
 
-#clear-chat-btn {
-    background: none;
-    border: none;
-    color: #666;
-    font-size: 1.2rem;
+.status-text i {
+
+    color: #23d5ab;
+}
+
+.header-actions {
+
+    display: flex;
+
+    gap: 8px;
+}
+
+.action-btn {
+
+    width: 38px;
+    height: 38px;
+
+    border: 1px solid #eee;
+
+    border-radius: 50%;
+
+    background: white;
+
     cursor: pointer;
-    transition: color 0.2s ease;
+
+    color: #667eea;
 }
 
-#clear-chat-btn:hover {
-    color: #000;
-}
-
-/* 5. Zona de Mensajes */
 #chat-messages {
+
     flex: 1;
-    padding: 20px;
+
     overflow-y: auto;
+
+    padding: 22px;
+
+    background: #fafafa;
+
     display: flex;
+
     flex-direction: column;
+
     gap: 12px;
-    background: #fafafa; /* Fondo ligerísimamente gris para resaltar los mensajes */
 }
 
-#chat-messages::-webkit-scrollbar { width: 5px; }
-#chat-messages::-webkit-scrollbar-thumb {
-    background: #e0e0e0;
-    border-radius: 10px;
-}
-
-/* 6. Burbujas de Mensaje (Estilo App Nativa) */
 .message {
+
     display: flex;
-    flex-direction: column;
+
     max-width: 85%;
-    animation: fadeIn 0.3s ease forwards;
+
+    animation: fadeIn .3s ease;
+}
+
+.ai-message {
+
+    align-self: flex-start;
+}
+
+.user-message {
+
+    align-self: flex-end;
 }
 
 .message-content {
+
     padding: 12px 16px;
-    font-size: 0.95rem;
-    line-height: 1.5;
-    word-wrap: break-word;
+
+    font-size: 14px;
+
+    line-height: 1.55;
 }
 
-/* Mensaje IA: Gris suave */
-.ai-message { align-self: flex-start; }
 .ai-message .message-content {
-    background: #ffffff;
-    color: #333;
-    border-radius: 18px 18px 18px 4px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    border: 1px solid #f0f0f0;
+
+    background: white;
+
+    border: 1px solid #eee;
+
+    border-radius:
+        18px 18px 18px 5px;
 }
 
-/* Mensaje Usuario: Negro moderno */
-.user-message { align-self: flex-end; }
 .user-message .message-content {
-    background: #1a1a1a;
-    color: #ffffff;
-    border-radius: 18px 18px 4px 18px;
+
+    color: white;
+
+    background:
+        linear-gradient(
+            135deg,
+            #667eea,
+            #764ba2
+        );
+
+    border-radius:
+        18px 18px 5px 18px;
 }
 
-/* Tarjeta de bienvenida */
-.welcome-card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    border: 1px solid #f0f0f0;
-    margin-bottom: 10px;
-}
-
-.welcome-card h2 {
-    font-size: 0.95rem;
-    color: #1a1a1a;
-    margin-bottom: 4px;
-}
-
-.welcome-card p {
-    font-size: 0.85rem;
-    color: #666;
-}
-
-.badge-list { margin-top: 10px; display: flex; gap: 6px; }
-.badge-item {
-    background: #f0f0f0;
-    color: #333;
-    font-size: 0.7rem;
-    padding: 4px 8px;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-/* 7. Botones Rápidos (Chips Minimalistas) */
 #quick-replies {
-    display: flex;
-    gap: 8px;
-    padding: 12px 20px;
-    overflow-x: auto;
-    background: #ffffff;
-    border-top: 1px solid #f0f0f0;
-}
 
-#quick-replies::-webkit-scrollbar { display: none; }
+    display: flex;
+
+    gap: 8px;
+
+    overflow-x: auto;
+
+    padding: 12px 18px;
+
+    background: white;
+
+    border-top: 1px solid #eee;
+}
 
 .quick-btn {
-    background: #f5f5f5;
-    border: 1px solid #e0e0e0;
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    color: #333;
-    cursor: pointer;
+
     white-space: nowrap;
-    transition: all 0.2s;
+
+    border: 1px solid #e5e5e9;
+
+    background: #f8f8fa;
+
+    padding: 8px 13px;
+
+    border-radius: 20px;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    font-size: 12px;
 }
 
 .quick-btn:hover {
-    background: #e0e0e0;
+
+    background: #eef0ff;
+
+    color: #667eea;
 }
 
-/* 8. Zona de Input */
 #chat-form {
-    display: flex;
-    padding: 12px 20px;
-    background: #ffffff;
-    gap: 10px;
-    align-items: center;
-}
 
-.input-wrapper {
-    flex: 1;
     display: flex;
+
+    gap: 10px;
+
+    padding: 13px 18px;
+
+    background: white;
 }
 
 #chat-input {
+
     width: 100%;
+
+    border: 1px solid #e4e4e8;
+
+    border-radius: 25px;
+
     padding: 12px 16px;
-    border: 1px solid #e0e0e0;
-    border-radius: 24px;
-    background: #f9f9f9;
-    color: #1a1a1a;
-    font-size: 0.95rem;
+
     outline: none;
-    transition: border 0.2s;
+
+    font-family: inherit;
 }
 
 #chat-input:focus {
-    border-color: #1a1a1a;
-    background: #ffffff;
+
+    border-color: #667eea;
 }
 
 #chat-form button {
-    background: #1a1a1a;
-    color: white;
-    border: none;
+
     width: 44px;
     height: 44px;
+
+    border: none;
+
     border-radius: 50%;
+
+    background: #111;
+
+    color: white;
+
     cursor: pointer;
-    font-size: 1.2rem;
+}
+
+.welcome-card {
+
+    background: white;
+
+    padding: 18px;
+
+    border-radius: 20px;
+
+    border: 1px solid #eee;
+
+    box-shadow: 0 5px 15px rgba(0,0,0,.03);
+}
+
+.welcome-card h2 {
+
+    font-size: 16px;
+
+    margin-bottom: 7px;
+}
+
+.welcome-card h2 i {
+
+    color: #667eea;
+}
+
+.welcome-card p {
+
+    color: #777;
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+.badge-list {
+
     display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: transform 0.2s;
+
+    gap: 6px;
+
+    margin-top: 10px;
+
+    flex-wrap: wrap;
 }
 
-#chat-form button:hover {
-    transform: scale(1.05);
+.badge-item {
+
+    background: #f0f2ff;
+
+    color: #667eea;
+
+    padding: 5px 9px;
+
+    border-radius: 10px;
+
+    font-size: 10px;
+
+    font-weight: 600;
 }
 
-/* 9. Indicador de escritura animado */
-.hidden { display: none !important; }
-.typing-dots { display: flex; gap: 4px; padding: 4px; }
+.hidden {
+
+    display: none !important;
+}
+
+.typing-dots {
+
+    display: flex;
+
+    gap: 4px;
+}
+
 .typing-dots span {
+
     width: 6px;
     height: 6px;
-    background: #999;
-    border-radius: 50%;
-    animation: blink 1.4s infinite both;
-}
-.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
 
-/* 10. Animaciones base */
+    background: #999;
+
+    border-radius: 50%;
+
+    animation: blink 1.2s infinite;
+}
+
+
+/* =========================================================
+   WELLNESS
+========================================================= */
+
+.breathing-card {
+
+    background: white;
+
+    border: 1px solid #eee;
+
+    border-radius: 28px;
+
+    padding: 45px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 70px;
+
+    box-shadow: 0 15px 40px rgba(0,0,0,.04);
+}
+
+.breathing-circle {
+
+    width: 230px;
+    height: 230px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            #667eea,
+            #764ba2
+        );
+
+    color: white;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    box-shadow:
+        0 20px 60px rgba(102,126,234,.3);
+
+    transition:
+        transform 4s ease-in-out;
+}
+
+.breathing-circle.breathe {
+
+    transform: scale(1.25);
+}
+
+.breathing-circle div {
+
+    text-align: center;
+}
+
+.breathing-circle span {
+
+    display: block;
+
+    font-weight: 700;
+}
+
+.breathing-circle small {
+
+    opacity: .7;
+}
+
+
+/* =========================================================
+   GAMES
+========================================================= */
+
+.games-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 18px;
+}
+
+.game-card {
+
+    background: white;
+
+    border: 1px solid #eee;
+
+    border-radius: 24px;
+
+    padding: 25px;
+
+    transition: .3s;
+}
+
+.game-card:hover {
+
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 15px 35px rgba(0,0,0,.07);
+}
+
+.game-icon {
+
+    font-size: 38px;
+
+    margin-bottom: 18px;
+}
+
+.game-card h3 {
+
+    margin-bottom: 7px;
+}
+
+.game-card p {
+
+    color: #888;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+.game-score {
+
+    margin: 20px 0;
+
+    font-size: 12px;
+
+    color: #777;
+}
+
+.game-score strong {
+
+    color: #667eea;
+}
+
+
+/* =========================================================
+   FOCUS
+========================================================= */
+
+.focus-card {
+
+    max-width: 700px;
+
+    margin: auto;
+
+    padding: 60px;
+
+    background: white;
+
+    border: 1px solid #eee;
+
+    border-radius: 30px;
+
+    text-align: center;
+
+    box-shadow: 0 15px 40px rgba(0,0,0,.05);
+}
+
+.focus-time {
+
+    font-size: clamp(60px,10vw,100px);
+
+    font-weight: 700;
+
+    letter-spacing: -5px;
+
+    margin-bottom: 5px;
+}
+
+.focus-card > span {
+
+    color: #999;
+
+    font-size: 12px;
+}
+
+.focus-controls {
+
+    margin-top: 25px;
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 10px;
+}
+
+
+/* =========================================================
+   SOUNDS
+========================================================= */
+
+.sounds-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4,1fr);
+
+    gap: 15px;
+}
+
+.sound-card {
+
+    border: 1px solid #eee;
+
+    background: white;
+
+    border-radius: 22px;
+
+    padding: 25px;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition: .3s;
+
+    font-family: inherit;
+}
+
+.sound-card:hover,
+.sound-card.active {
+
+    transform: translateY(-4px);
+
+    border-color: #667eea;
+
+    box-shadow:
+        0 15px 30px rgba(102,126,234,.12);
+}
+
+.sound-card span {
+
+    display: block;
+
+    font-size: 35px;
+
+    margin-bottom: 18px;
+}
+
+.sound-card strong {
+
+    display: block;
+
+    font-size: 14px;
+}
+
+.sound-card small {
+
+    display: block;
+
+    margin-top: 5px;
+
+    color: #999;
+}
+
+.sound-status {
+
+    margin-top: 20px;
+
+    background: #111;
+
+    color: white;
+
+    padding: 15px;
+
+    border-radius: 15px;
+
+    text-align: center;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   SCHOOL
+========================================================= */
+
+.school-hero {
+
+    padding: 45px;
+
+    border-radius: 28px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #111,
+            #272727
+        );
+
+    color: white;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 25px;
+}
+
+.school-logo {
+
+    width: 80px;
+    height: 80px;
+
+    border-radius: 25px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(255,255,255,.1);
+
+    font-size: 38px;
+}
+
+.school-hero .eyebrow {
+
+    color: #9ca8ff;
+}
+
+.school-hero p {
+
+    color: #aaa;
+
+    max-width: 650px;
+
+    line-height: 1.6;
+
+    margin-top: 8px;
+}
+
+.school-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap: 15px;
+
+    margin-top: 18px;
+}
+
+.info-card {
+
+    padding: 25px;
+
+    background: white;
+
+    border: 1px solid #eee;
+
+    border-radius: 22px;
+}
+
+.info-card i {
+
+    font-size: 27px;
+
+    color: #667eea;
+
+    margin-bottom: 20px;
+
+    display: block;
+}
+
+.info-card p {
+
+    color: #888;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+    margin-top: 7px;
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+.toast {
+
+    position: fixed;
+
+    bottom: 25px;
+
+    right: 25px;
+
+    padding: 13px 18px;
+
+    background: #111;
+
+    color: white;
+
+    border-radius: 14px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    font-size: 12px;
+
+    opacity: 0;
+
+    transform: translateY(15px);
+
+    pointer-events: none;
+
+    transition: .3s;
+
+    z-index: 999;
+}
+
+.toast.show {
+
+    opacity: 1;
+
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   ANIMACIONES
+========================================================= */
+
 @keyframes blink {
-    0%, 80%, 100% { opacity: 0.3; }
-    40% { opacity: 1; }
+
+    0%,80%,100% {
+        opacity: .3;
+    }
+
+    40% {
+        opacity: 1;
+    }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
-}/* --- ICONOS CON REALIDAD Y COLOR --- */
-.ph-fill, .ph-bold {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    display: inline-block;
+
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-/* El botón de enviar con un verde WhatsApp/Moderno */
-#chat-form button i {
-    background: linear-gradient(135deg, #23d5ab 0%, #25D366 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width:1100px) {
+
+    .feature-grid {
+
+        grid-template-columns:
+            repeat(2,1fr);
+    }
+
+    .sounds-grid {
+
+        grid-template-columns:
+            repeat(2,1fr);
+    }
+
+    .games-grid {
+
+        grid-template-columns:
+            repeat(2,1fr);
+    }
 }
 
-/* El ícono de Glow AI con tonos cálidos */
-.ai-avatar i, .welcome-card h2 i {
-    background: linear-gradient(135deg, #FF2E93 0%, #FF8000 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+
+@media(max-width:850px) {
+
+    .sidebar {
+
+        position: fixed;
+
+        left: -280px;
+
+        top: 10px;
+        bottom: 10px;
+
+        transition: .3s;
+    }
+
+    .sidebar.open {
+
+        left: 10px;
+    }
+
+    .close-menu {
+
+        display: block;
+
+        position: absolute;
+
+        right: 15px;
+        top: 15px;
+    }
+
+    .menu-btn {
+
+        display: block;
+    }
+
+    .main-content {
+
+        margin-left: 0;
+    }
+
+    .hero {
+
+        padding: 30px;
+    }
+
+    .hero-orb {
+
+        display: none;
+    }
+
+    .breathing-card {
+
+        flex-direction: column;
+
+        gap: 35px;
+
+        text-align: center;
+    }
+
+    .school-grid {
+
+        grid-template-columns: 1fr;
+    }
+}
+
+
+@media(max-width:600px) {
+
+    .app-shell {
+
+        padding: 8px;
+    }
+
+    .main-content {
+
+        border-radius: 22px;
+    }
+
+    .content-area {
+
+        padding: 20px;
+    }
+
+    .feature-grid,
+    .games-grid,
+    .sounds-grid {
+
+        grid-template-columns: 1fr;
+    }
+
+    .hero h1 {
+
+        font-size: 38px;
+    }
+
+    .hero {
+
+        min-height: auto;
+    }
+
+    #chat-container {
+
+        height: 600px;
+    }
+
+    .school-hero {
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        padding: 30px;
+    }
+
+    .focus-card {
+
+        padding: 35px 20px;
+    }
+}
+/* =========================================================
+   ULTRA PREMIUM PATCH — INTERACCIONES Y JUEGOS
+   Conserva el diseño original y añade capas interactivas.
+========================================================= */
+
+.game-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(10,12,25,.42);
+    backdrop-filter: blur(18px);
+}
+.game-modal.show { display: flex; animation: modalIn .25s ease; }
+.game-modal-card {
+    width: min(760px, 96vw);
+    max-height: 90vh;
+    overflow: auto;
+    background: rgba(255,255,255,.96);
+    border: 1px solid rgba(255,255,255,.9);
+    border-radius: 30px;
+    box-shadow: 0 30px 90px rgba(0,0,0,.22);
+    padding: 28px;
+    position: relative;
+}
+.game-modal-top { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; }
+.game-modal-title { font-size:24px; font-weight:800; letter-spacing:-.6px; }
+.game-modal-subtitle { color:#858894; font-size:12px; margin-top:4px; }
+.game-close {
+    width:40px; height:40px; border-radius:50%; border:1px solid #ececf1;
+    background:#fff; cursor:pointer; font-size:20px; color:#555;
+}
+.game-hud { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+.game-stat { background:#f6f7fb; border:1px solid #ececf1; border-radius:14px; padding:9px 13px; font-size:12px; color:#777; }
+.game-stat strong { color:#222; margin-left:4px; }
+.game-board {
+    min-height:330px; border-radius:24px; position:relative; overflow:hidden;
+    background:radial-gradient(circle at 20% 20%, rgba(102,126,234,.18), transparent 32%),
+               radial-gradient(circle at 80% 80%, rgba(35,213,171,.14), transparent 32%), #f8f9fd;
+    border:1px solid #eceef4;
+}
+.game-board-center { min-height:330px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; text-align:center; padding:30px; }
+.game-board-message { color:#777; font-size:13px; max-width:430px; line-height:1.6; }
+.game-start { margin-top:4px; }
+.bubble-target {
+    position:absolute; width:48px; height:48px; border-radius:50%; border:1px solid rgba(255,255,255,.8);
+    background:radial-gradient(circle at 30% 25%, #fff, #8c9cf5 35%, #667eea 75%);
+    box-shadow:0 10px 25px rgba(102,126,234,.28); cursor:pointer;
+    animation:bubblePop .18s ease; transform:translate(-50%,-50%);
+}
+.bubble-target::after { content:""; position:absolute; width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,.75); top:9px; left:11px; }
+.focus-target {
+    position:absolute; width:62px; height:62px; border-radius:50%; border:0; cursor:pointer;
+    background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; box-shadow:0 14px 30px rgba(102,126,234,.28);
+    transform:translate(-50%,-50%); font-size:18px; font-weight:700;
+}
+.memory-grid { display:grid; grid-template-columns:repeat(4, minmax(55px,1fr)); gap:12px; width:min(440px,90%); margin:auto; }
+.memory-cell {
+    aspect-ratio:1; border:0; border-radius:18px; cursor:pointer; background:#e9ebf7; color:transparent;
+    box-shadow:inset 0 0 0 1px #dfe2ef; transition:.18s; font-size:20px; font-weight:800;
+}
+.memory-cell.lit { background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; transform:scale(1.03); }
+.memory-cell.correct { background:#dff8ef; color:#148c6d; }
+.game-result { text-align:center; padding:28px 12px; }
+.game-result-icon { font-size:48px; margin-bottom:8px; }
+.game-result h3 { font-size:24px; margin-bottom:6px; }
+.game-result p { color:#777; line-height:1.6; font-size:13px; }
+.game-result .xp-award { display:inline-flex; margin-top:16px; padding:9px 14px; border-radius:999px; background:#eef0ff; color:#667eea; font-weight:800; font-size:12px; }
+.school-card-clickable { cursor:pointer; transition:.25s; }
+.school-card-clickable:hover { transform:translateY(-4px); box-shadow:0 15px 35px rgba(0,0,0,.07); }
+.school-detail {
+    margin-top:18px; padding:22px; border-radius:22px; background:linear-gradient(135deg,#f8f9ff,#fff);
+    border:1px solid #ececf2; animation:fadeIn .25s ease;
+}
+.school-detail h3 { margin-bottom:8px; }
+.school-detail p { color:#777; line-height:1.65; font-size:13px; }
+.sound-muted #soundToggle { color:#d35d73; background:#fff3f6; }
+.sound-on #soundToggle { color:#667eea; }
+@keyframes bubblePop { from { opacity:0; transform:translate(-50%,-50%) scale(.5); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+@keyframes modalIn { from { opacity:0; } to { opacity:1; } }
+@media(max-width:600px) {
+    .game-modal-card { padding:20px; border-radius:24px; }
+    .game-board, .game-board-center { min-height:280px; }
+    .memory-grid { gap:8px; }
 }
