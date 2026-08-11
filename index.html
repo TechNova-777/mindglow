@@ -3,175 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindGlow | Tu Asistente de Salud Mental</title>
+    <title>Glow AI — MindGlow Ultra Pro</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Cabecera Avanzada */
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ai-avatar {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.3rem;
+            box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
+            position: relative;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background-color: #23d5ab;
+            border: 2px solid white;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            box-shadow: 0 0 8px #23d5ab;
+        }
+
+        .header-text {
+            text-align: left;
+        }
+
+        .header-text h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .header-text .status-text {
+            font-size: 0.75rem;
+            color: #718096;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #764ba2;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .action-btn:hover {
+            background: #ffffff;
+            transform: scale(1.08);
+            color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        /* Tarjeta de Bienvenida */
+        .welcome-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+            margin-bottom: 10px;
+        }
+
+        .welcome-card h2 {
+            font-size: 1rem;
+            color: #2d3436;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .welcome-card p {
+            font-size: 0.88rem;
+            color: #636e72;
+            line-height: 1.4;
+        }
+
+        .badge-list {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .badge-item {
+            background: #f0f3ff;
+            color: #667eea;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Botones Rápidos / Chips */
+        .quick-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Entrada de texto con botones secundarios */
+        .input-wrapper {
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon-btn {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .input-icon-btn:hover {
+            color: #667eea;
+        }
+    </style>
 </head>
 <body>
 
-    <header class="navbar">
-        <div class="logo-container">
-            <span class="logo-icon">💡</span>
-            <span class="logo-text">MindGlow</span>
-        </div>
-        <nav>
-            <ul>
-                <li><a href="#inicio">Inicio</a></li>
-                <li><a href="#mascotas">Mascota</a></li>
-                <li><a href="#interactivo">Centro Zen</a></li>
-                <li><a href="#galeria">Galería</a></li>
-                <li><a href="#equipo">Equipo</a></li>
-            </ul>
-        </nav>
-        <a href="#contacto" class="btn-contacto">Contáctanos</a>
-    </header>
-
-    <section id="inicio" class="hero">
-        <div class="hero-content">
-            <span class="badge">📍 I.E. 0162 San José Obrero</span>
-            <h1>Cuida tu mente.<br><span class="highlight">Mejora tu vida.</span></h1>
-            <p>El primer asistente virtual diseñado para ayudarte a desconectar, respirar y encontrar tu balance diario.</p>
-            <div class="hero-buttons">
-                <a href="#interactivo" class="btn-primary">🎮 Ir al Centro Zen</a>
-                <a href="#mascotas" class="btn-secondary">🐾 Elegir Mascota</a>
-            </div>
-        </div>
-        <div class="hero-image">
-            <div class="mascota-display">
-                <span id="hero-avatar" class="avatar-large">🧠</span>
-                <p id="hero-mascota-nombre" class="mascota-tag">Glowy · Tu guía Zen</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="mood-tracker">
-        <h2>¿Cómo te sientes hoy?</h2>
-        <div class="emociones-grid">
-            <button onclick="registrarEmocion('feliz', '😄')">😄 Feliz</button>
-            <button onclick="registrarEmocion('tranquilo', '🧘')">🧘 Calmo</button>
-            <button onclick="registrarEmocion('estresado', '😰')">😰 Estresado</button>
-            <button onclick="registrarEmocion('cansado', '🥱')">🥱 Cansado</button>
-        </div>
-        <p id="mensaje-emocion" class="mensaje-emocion">Selecciona una emoción para recibir un consejo de tu mascota.</p>
-    </section>
-
-    <section id="mascotas" class="seccion-mascotas">
-        <h2>🐾 Tu Compañero de Bienestar</h2>
-        <p>Selecciona quién te acompañará en tus sesiones de relajación.</p>
+    <main id="chat-container">
         
-        <p class="companero-actual">Compañero Actual: <strong id="nombre-activo">Glowy (Cerebrito Zen)</strong></p>
-
-        <div class="mascotas-cards">
-            <div class="card-mascota activa" id="card-glowy" onclick="seleccionarMascota('Glowy', 'Cerebrito Zen', '🧠', 'card-glowy')">
-                <span class="emoji-mascota">🧠</span>
-                <h3>Glowy</h3>
-                <p>El Cerebrito Zen</p>
-                <button class="btn-select">Seleccionado</button>
+        <header id="chat-header">
+            <div class="header-info">
+                <div class="ai-avatar">
+                    <i class="ph-fill ph-sparkle"></i>
+                    <span class="status-dot"></span>
+                </div>
+                <div class="header-text">
+                    <h1>Glow AI</h1>
+                    <span class="status-text">
+                        <i class="ph-fill ph-circle"></i> En línea • MindGlow
+                    </span>
+                </div>
             </div>
 
-            <div class="card-mascota" id="card-zenny" onclick="seleccionarMascota('Zenny', 'El Panda Calmo', '🐼', 'card-zenny')">
-                <span class="emoji-mascota">🐼</span>
-                <h3>Zenny</h3>
-                <p>El Panda Calmo</p>
-                <button class="btn-select">Elegir a Zenny</button>
+            <div class="header-actions">
+                <button class="action-btn" id="clear-chat-btn" title="Reiniciar chat">
+                    <i class="ph-bold ph-arrows-clockwise"></i>
+                </button>
             </div>
+        </header>
 
-            <div class="card-mascota" id="card-lumina" onclick="seleccionarMascota('Lumina', 'La Zorrilla Sabia', '🦊', 'card-lumina')">
-                <span class="emoji-mascota">🦊</span>
-                <h3>Lumina</h3>
-                <p>La Zorrilla Sabia</p>
-                <button class="btn-select">Elegir a Lumina</button>
-            </div>
-        </div>
-    </section>
-
-    <section id="interactivo" class="centro-zen">
-        <h2>🎮 Centro Interactivo</h2>
-        <p>Herramientas diseñadas para calmar tu mente en minutos.</p>
-
-        <div class="juegos-grid">
+        <section id="chat-messages" aria-live="polite">
             
-            <div class="juego-card">
-                <h3>🌬️ Respiración Guiada</h3>
-                <p>Sigue el círculo para calmar la ansiedad.</p>
-                <div class="circulo-respiracion-container">
-                    <div id="circulo-respiracion" class="circulo-respiracion">
-                        <span id="texto-respiracion">Inhala</span>
-                    </div>
+            <article class="welcome-card">
+                <h2><i class="ph-fill ph-robot" style="color: #667eea;"></i> ¡Hola, bienvenido!</h2>
+                <p>Soy tu asistente <strong>Glow AI</strong>. Estoy aquí para ayudarte a organizarte, relajarte o responder lo que necesites.</p>
+                <div class="badge-list">
+                    <span class="badge-item"><i class="ph-fill ph-lightning"></i> Rápido</span>
+                    <span class="badge-item"><i class="ph-fill ph-brain"></i> Inteligente</span>
+                    <span class="badge-item"><i class="ph-fill ph-heartbeat"></i> Bienestar</span>
                 </div>
-                <button id="btn-respiracion" onclick="toggleRespiracion()" class="btn-game">Iniciar Ejercicio</button>
-            </div>
+            </article>
 
-            <div class="juego-card">
-                <h3>🫧 Burbujas Anti-estrés</h3>
-                <p>Libera tensión haciendo clic. Puntos: <strong id="puntos">0</strong></p>
-                <div class="contenedor-burbujas" id="contenedor-burbujas">
-                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
-                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
-                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
-                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
-                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
-                    <div class="burbuja" onclick="reventarBurbuja(this)"></div>
-                </div>
-                <button onclick="reiniciarBurbujas()" class="btn-game">Reiniciar Burbujas</button>
-            </div>
-
-            <div class="juego-card">
-                <h3>🧘 Memoria Zen</h3>
-                <p>Encuentra las parejas para enfocar tu mente.</p>
-                <div class="memoria-grid" id="memoria-grid">
+            <div id="typing-indicator" class="hidden">
+                <article class="message ai-message">
+                    <div class="message-content typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
                     </div>
-                <button onclick="iniciarJuegoMemoria()" class="btn-game">Mezclar Cartas</button>
+                </article>
             </div>
 
-        </div>
-    </section>
+        </section>
 
-    <section id="galeria" class="galeria-seccion">
-        <h2>📸 Galería MindGlow</h2>
-        <div class="galeria-grid">
-            <div class="galeria-item">
-                <img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=600&auto=format&fit=crop" alt="Meditación">
-                <p>Enfoque y Calma</p>
-            </div>
-            <div class="galeria-item">
-                <img src="https://images.unsplash.com/photo-1616469829581-73993eb86b02?q=80&w=600&auto=format&fit=crop" alt="Interfaz">
-                <p>Interfaz Limpia</p>
-            </div>
-            <div class="galeria-item">
-                <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format&fit=crop" alt="Equipo">
-                <p>Trabajo en Equipo</p>
-            </div>
-        </div>
-    </section>
+        <nav id="quick-replies" aria-label="Respuestas rápidas">
+            <button class="quick-btn" onclick="sendQuickMessage('👋 ¡Hola Glow!')">
+                <i class="ph-fill ph-hand-waving"></i> Hola
+            </button>
+            <button class="quick-btn" onclick="sendQuickMessage('🤯 Tengo estrés por las tareas')">
+                <i class="ph-fill ph-brain"></i> Estrés
+            </button>
+            <button class="quick-btn" onclick="sendQuickMessage('🌱 Dame un consejo de estudio')">
+                <i class="ph-fill ph-plant"></i> Tips
+            </button>
+            <button class="quick-btn" onclick="sendQuickMessage('⚡ Dame motivación para hoy')">
+                <i class="ph-fill ph-lightning"></i> Ánimo
+            </button>
+            <button class="quick-btn" onclick="sendQuickMessage('😂 Cuéntame algo divertido')">
+                <i class="ph-fill ph-smiley"></i> Chill
+            </button>
+        </nav>
 
-    <section id="equipo" class="equipo-seccion">
-        <h2>Equipo "Impulso Mental"</h2>
-        <p>I.E. 0162 San José Obrero · Categoría B</p>
-        <ul class="lista-equipo">
-            <li>Clara Soto</li>
-            <li>Edison Pineda</li>
-            <li>Camila Carhuaz</li>
-            <li>Jack Bryan Perez</li>
-            <li>Andrea Rosas</li>
-        </ul>
-        <p class="docente"><strong>Docente Asesora:</strong> Ketty Liz Fabian Ribera</p>
-    </section>
-
-    <section id="contacto" class="contacto-seccion">
-        <h2>¿Listo para mejorar tu día?</h2>
-        <p>"Tu salud mental no es un lujo, es una prioridad."</p>
-        <form onsubmit="enviarFormulario(event)" class="form-contacto">
-            <input type="text" placeholder="Tu Nombre" required>
-            <input type="email" placeholder="Tu Correo Electrónico" required>
-            <textarea placeholder="Escribe tu mensaje o sugerencia..." rows="4" required></textarea>
-            <button type="submit" class="btn-primary">Enviar Mensaje</button>
+        <form id="chat-form">
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="chat-input" 
+                    placeholder="Escribe un mensaje..." 
+                    autocomplete="off" 
+                    required 
+                />
+            </div>
+            <button type="submit" id="send-btn" title="Enviar">
+                <i class="ph-fill ph-paper-plane-tilt"></i>
+            </button>
         </form>
-    </section>
 
-    <footer>
-        <p>MindGlow © 2026. Proyecto "Mente Sana" - I.E. 0162 San José Obrero</p>
-    </footer>
+    </main>
 
     <script src="script.js"></script>
 </body>

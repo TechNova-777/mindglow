@@ -1,254 +1,306 @@
+/* 1. Fuente Premium */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     font-family: 'Poppins', sans-serif;
-    scroll-behavior: smooth;
 }
 
+/* 2. EL FONDO ANIMADO (Intacto, como te gustó) */
 body {
-    background-color: #f4f8fb;
-    color: #333;
-    line-height: 1.6;
-}
-
-/* Navbar */
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 5%;
-    background-color: #ffffff;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.logo-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.logo-icon { font-size: 1.8rem; }
-.logo-text { font-weight: 700; font-size: 1.4rem; color: #2c3e50; }
-
-.navbar nav ul {
-    display: flex;
-    list-style: none;
-    gap: 20px;
-}
-
-.navbar nav a {
-    text-decoration: none;
-    color: #555;
-    font-weight: 500;
-    transition: color 0.3s;
-}
-
-.navbar nav a:hover { color: #00bfff; }
-
-.btn-contacto, .btn-primary {
-    background: #00bfff;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 25px;
-    text-decoration: none;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.btn-contacto:hover, .btn-primary:hover { background: #0099cc; }
-
-/* Hero */
-.hero {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 60px 8%;
-    background: linear-gradient(135deg, #e0f2fe 0%, #ffffff 100%);
-}
-
-.badge {
-    background-color: #e1f5fe;
-    color: #0288d1;
-    padding: 5px 15px;
-    border-radius: 15px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.hero h1 { font-size: 2.8rem; margin: 15px 0; color: #1e293b; }
-.highlight { color: #00bfff; }
-.hero-buttons { margin-top: 25px; display: flex; gap: 15px; }
-
-.btn-secondary {
-    background: #ffffff;
-    color: #00bfff;
-    border: 2px solid #00bfff;
-    padding: 10px 20px;
-    border-radius: 25px;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.avatar-large { font-size: 6rem; display: block; text-align: center; }
-.mascota-tag { text-align: center; font-weight: bold; background: #fff; padding: 5px 15px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-
-/* Mood Tracker */
-.mood-tracker {
-    text-align: center;
-    padding: 40px 5%;
-    background: #ffffff;
-    margin: 20px 8%;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-}
-
-.emociones-grid {
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    height: 100vh;
     display: flex;
     justify-content: center;
-    gap: 15px;
-    margin: 20px 0;
-    flex-wrap: wrap;
+    align-items: center;
+    color: #1a1a1a;
 }
 
-.emociones-grid button {
-    background: #f1f5f9;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 15px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    transition: transform 0.2s, background 0.2s;
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
-.emociones-grid button:hover { transform: translateY(-3px); background: #e2e8f0; }
-
-.mensaje-emocion { font-style: italic; color: #64748b; }
-
-/* Mascotas */
-.seccion-mascotas { text-align: center; padding: 50px 8%; }
-.companero-actual { margin: 15px 0; font-size: 1.1rem; }
-
-.mascotas-cards {
-    display: flex;
-    justify-content: center;
-    gap: 25px;
-    margin-top: 30px;
-    flex-wrap: wrap;
-}
-
-.card-mascota {
-    background: white;
-    padding: 25px;
-    border-radius: 20px;
-    width: 220px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: all 0.3s;
-}
-
-.card-mascota:hover { transform: translateY(-5px); }
-.card-mascota.activa { border-color: #00bfff; background: #f0f9ff; }
-.emoji-mascota { font-size: 3.5rem; display: block; margin-bottom: 10px; }
-
-.btn-select {
-    margin-top: 15px;
-    background: #e2e8f0;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-}
-
-.card-mascota.activa .btn-select { background: #00bfff; color: white; }
-
-/* Centro Zen */
-.centro-zen { text-align: center; padding: 50px 8%; background: #eef2f6; }
-.juegos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-top: 30px; }
-
-.juego-card {
-    background: white;
-    padding: 25px;
-    border-radius: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+/* 3. Contenedor: Sólido, Blanco y Elegante */
+#chat-container {
+    width: 92%;
+    max-width: 420px;
+    height: 85vh;
+    background: #ffffff; /* Blanco puro, sin transparencias raras */
+    border-radius: 24px;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
+    overflow: hidden;
 }
 
-.btn-game {
-    background: #00bfff;
+/* 4. Cabecera Limpia */
+#chat-header {
+    background: #ffffff;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    z-index: 10;
+}
+
+/* Si estás usando la estructura con Avatar */
+.header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ai-avatar {
+    width: 40px;
+    height: 40px;
+    background: #000000;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    position: relative;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #25D366; /* Verde tipo WhatsApp */
+    border: 2px solid white;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+}
+
+.header-text h1 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.header-text .status-text {
+    font-size: 0.75rem;
+    color: #666;
+}
+
+#clear-chat-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+#clear-chat-btn:hover {
+    color: #000;
+}
+
+/* 5. Zona de Mensajes */
+#chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #fafafa; /* Fondo ligerísimamente gris para resaltar los mensajes */
+}
+
+#chat-messages::-webkit-scrollbar { width: 5px; }
+#chat-messages::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 10px;
+}
+
+/* 6. Burbujas de Mensaje (Estilo App Nativa) */
+.message {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.message-content {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+/* Mensaje IA: Gris suave */
+.ai-message { align-self: flex-start; }
+.ai-message .message-content {
+    background: #ffffff;
+    color: #333;
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border: 1px solid #f0f0f0;
+}
+
+/* Mensaje Usuario: Negro moderno */
+.user-message { align-self: flex-end; }
+.user-message .message-content {
+    background: #1a1a1a;
+    color: #ffffff;
+    border-radius: 18px 18px 4px 18px;
+}
+
+/* Tarjeta de bienvenida */
+.welcome-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid #f0f0f0;
+    margin-bottom: 10px;
+}
+
+.welcome-card h2 {
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.welcome-card p {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.badge-list { margin-top: 10px; display: flex; gap: 6px; }
+.badge-item {
+    background: #f0f0f0;
+    color: #333;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* 7. Botones Rápidos (Chips Minimalistas) */
+#quick-replies {
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    overflow-x: auto;
+    background: #ffffff;
+    border-top: 1px solid #f0f0f0;
+}
+
+#quick-replies::-webkit-scrollbar { display: none; }
+
+.quick-btn {
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #333;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.quick-btn:hover {
+    background: #e0e0e0;
+}
+
+/* 8. Zona de Input */
+#chat-form {
+    display: flex;
+    padding: 12px 20px;
+    background: #ffffff;
+    gap: 10px;
+    align-items: center;
+}
+
+.input-wrapper {
+    flex: 1;
+    display: flex;
+}
+
+#chat-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 24px;
+    background: #f9f9f9;
+    color: #1a1a1a;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border 0.2s;
+}
+
+#chat-input:focus {
+    border-color: #1a1a1a;
+    background: #ffffff;
+}
+
+#chat-form button {
+    background: #1a1a1a;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-    margin-top: 15px;
-}
-
-/* Animación Respiración */
-.circulo-respiracion-container { height: 140px; display: flex; align-items: center; justify-content: center; margin: 15px 0; }
-.circulo-respiracion {
-    width: 90px;
-    height: 90px;
-    background: #38bdf8;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    transition: transform 3s ease-in-out;
-}
-
-.circulo-respiracion.expandir { transform: scale(1.4); background: #818cf8; }
-
-/* Burbujas */
-.contenedor-burbujas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 20px 0; min-height: 100px; }
-.burbuja {
-    width: 45px;
-    height: 45px;
-    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(0, 191, 255, 0.5));
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 191, 255, 0.2);
-    transition: transform 0.1s;
-}
-.burbuja:hover { transform: scale(1.1); }
-.burbuja.reventada { visibility: hidden; opacity: 0; }
-
-/* Memoria */
-.memoria-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 15px 0; }
-.carta-memoria {
-    width: 50px;
-    height: 50px;
-    background: #00bfff;
-    color: white;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     display: flex;
-    align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    cursor: pointer;
+    align-items: center;
+    transition: transform 0.2s;
 }
 
-/* Galería y Footer */
-.galeria-seccion, .equipo-seccion, .contacto-seccion { text-align: center; padding: 50px 8%; }
-.galeria-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
-.galeria-item img { width: 250px; height: 160px; object-fit: cover; border-radius: 15px; }
+#chat-form button:hover {
+    transform: scale(1.05);
+}
 
-.lista-equipo { list-style: none; margin: 15px 0; }
-.form-contacto { display: flex; flex-direction: column; gap: 12px; max-width: 400px; margin: 20px auto 0; }
-.form-contacto input, .form-contacto textarea { padding: 12px; border: 1px solid #ccc; border-radius: 10px; }
+/* 9. Indicador de escritura animado */
+.hidden { display: none !important; }
+.typing-dots { display: flex; gap: 4px; padding: 4px; }
+.typing-dots span {
+    width: 6px;
+    height: 6px;
+    background: #999;
+    border-radius: 50%;
+    animation: blink 1.4s infinite both;
+}
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
 
-footer { background: #1e293b; color: white; text-align: center; padding: 20px; margin-top: 40px; }
+/* 10. Animaciones base */
+@keyframes blink {
+    0%, 80%, 100% { opacity: 0.3; }
+    40% { opacity: 1; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}/* --- ICONOS CON REALIDAD Y COLOR --- */
+.ph-fill, .ph-bold {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
+
+/* El botón de enviar con un verde WhatsApp/Moderno */
+#chat-form button i {
+    background: linear-gradient(135deg, #23d5ab 0%, #25D366 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* El ícono de Glow AI con tonos cálidos */
+.ai-avatar i, .welcome-card h2 i {
+    background: linear-gradient(135deg, #FF2E93 0%, #FF8000 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
