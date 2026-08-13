@@ -1,886 +1,165 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Mind Glow — Ultra Premium</title>
-
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d16">
+  <meta name="description" content="Mind Glow 2.0 — bienestar digital, concentración, juegos y Glow AI para estudiantes.">
+  <title>Mind Glow 2.1 — Mente Sana</title>
+  <link rel="preload" as="image" href="assets/mindglow-logo.png">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <div class="bg-orb orb-a"></div><div class="bg-orb orb-b"></div><div class="noise"></div>
 
-<!-- =========================================================
-     FONDO
-========================================================= -->
+  <section id="welcome" class="welcome-screen">
+    <div class="welcome-card glass">
+      <div class="brand-badge"><img src="assets/mindglow-logo.png" alt="Mind Glow"></div>
+      <p class="eyebrow">MIND GLOW 2.1 · IMPULSO MENTAL</p>
+      <h1>Tu mente también<br><span>merece una experiencia.</span></h1>
+      <p class="welcome-copy">Calma, concentración, música, juegos y Glow AI en una experiencia más inmersiva y desplegable.</p>
+      <button class="btn primary xl" id="enterBtn">Entrar a Mind Glow <span>↗</span></button>
+      <div class="trust-row"><span>⚡ Sin frameworks</span><span>🔒 Datos locales</span><span>🎧 Audio incluido</span></div>
+    </div>
+  </section>
 
-<div class="ambient ambient-1"></div>
-<div class="ambient ambient-2"></div>
-
-<!-- =========================================================
-     APP
-========================================================= -->
-
-<div class="app-shell">
-
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-
-        <div class="brand">
-            <div class="brand-logo">
-                ✦
-            </div>
-
-            <div>
-                <strong>Mind Glow</strong>
-                <span>Ultra Premium</span>
-            </div>
+  <div id="app" class="app hidden">
+    <aside id="sidebar" class="sidebar glass">
+      <div class="sidebar-head">
+        <button class="brand-mini" data-view="home" aria-label="Inicio"><img src="assets/mindglow-logo.png" alt="Mind Glow"></button>
+        <div class="brand-copy"><strong>Mind Glow</strong><small>2.1 · Mente Sana</small></div>
+        <button id="collapseBtn" class="icon-btn" title="Colapsar menú">☰</button>
+      </div>
+      <nav class="nav-list" id="navList"></nav>
+      <div class="sidebar-footer">
+        <div class="xp-panel">
+          <div class="xp-row"><span>Nivel <b id="levelValue">1</b></span><span><b id="xpValue">0</b> XP</span></div>
+          <div class="xp-track"><i id="xpBar"></i></div>
+          <small id="xpHint">100 XP para el siguiente nivel</small>
         </div>
-
-        <button class="close-menu" id="closeMenu">
-            <i class="ph ph-x"></i>
-        </button>
-
-        <nav class="main-nav">
-
-            <button class="nav-item active" data-section="home">
-                <i class="ph ph-sparkle"></i>
-                <span>Inicio</span>
-            </button>
-
-            <button class="nav-item" data-section="ai">
-                <i class="ph ph-brain"></i>
-                <span>Glow AI</span>
-            </button>
-
-            <button class="nav-item" data-section="wellness">
-                <i class="ph ph-leaf"></i>
-                <span>Bienestar</span>
-            </button>
-
-            <button class="nav-item" data-section="games">
-                <i class="ph ph-game-controller"></i>
-                <span>Juegos</span>
-            </button>
-
-            <button class="nav-item" data-section="focus">
-                <i class="ph ph-timer"></i>
-                <span>Focus</span>
-            </button>
-
-            <button class="nav-item" data-section="sounds">
-                <i class="ph ph-waveform"></i>
-                <span>Sonidos</span>
-            </button>
-
-            <button class="nav-item" data-section="school">
-                <i class="ph ph-buildings"></i>
-                <span>Mi colegio</span>
-            </button>
-
-        </nav>
-
-        <div class="sidebar-bottom">
-
-            <div class="xp-card">
-
-                <div class="xp-top">
-                    <span>Nivel <strong id="level">1</strong></span>
-                    <span id="xpText">0 XP</span>
-                </div>
-
-                <div class="xp-bar">
-                    <div id="xpProgress"></div>
-                </div>
-
-                <small>Continúa cuidando tu bienestar ✨</small>
-
-            </div>
-
-        </div>
-
+        <button class="nav-item" data-view="settings"><span>⚙</span><b>Configuración</b></button>
+      </div>
     </aside>
 
-
-    <!-- OVERLAY -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-
-    <!-- =====================================================
-         MAIN
-    ====================================================== -->
-
-    <main class="main-content">
-
-        <!-- TOPBAR -->
-
-        <header class="topbar">
-
-            <button class="menu-btn" id="menuBtn">
-                <i class="ph ph-list"></i>
-            </button>
-
-            <div class="top-title">
-                <span>Mind Glow</span>
-                <small id="pageSubtitle">Tu espacio para sentirte mejor</small>
-            </div>
-
-            <div class="top-actions">
-
-                <button class="top-btn" id="soundToggle">
-                    <i class="ph ph-speaker-high"></i>
-                </button>
-
-                <button class="profile-btn">
-                    <span>MG</span>
-                </button>
-
-            </div>
-
-        </header>
-
-
-        <!-- =================================================
-             SECCIONES
-        ================================================== -->
-
-        <div class="content-area">
-
-
-            <!-- ================= HOME ================= -->
-
-            <section class="page-section active" id="section-home">
-
-                <div class="hero">
-
-                    <div class="hero-content">
-
-                        <span class="eyebrow">
-                            ✦ TU ESPACIO DIGITAL DE BIENESTAR
-                        </span>
-
-                        <h1>
-                            Tu mente merece
-                            <span>un momento de calma.</span>
-                        </h1>
-
-                        <p>
-                            Bienvenido a Mind Glow. Explora herramientas,
-                            juegos, sonidos y conversa con Glow AI cuando
-                            necesites un poco de apoyo.
-                        </p>
-
-                        <div class="hero-actions">
-
-                            <button class="primary-btn" data-go="ai">
-                                <i class="ph ph-sparkle"></i>
-                                Hablar con Glow AI
-                            </button>
-
-                            <button class="secondary-btn" data-go="wellness">
-                                <i class="ph ph-leaf"></i>
-                                Tomarme un respiro
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                    <div class="hero-orb">
-
-                        <div class="orb-ring ring-one"></div>
-                        <div class="orb-ring ring-two"></div>
-
-                        <div class="orb-core">
-                            <i class="ph-fill ph-sparkle"></i>
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="section-heading">
-                    <div>
-                        <span>EXPLORA</span>
-                        <h2>¿Qué necesitas ahora?</h2>
-                    </div>
-                </div>
-
-
-                <div class="feature-grid">
-
-                    <button class="feature-card purple" data-go="ai">
-                        <div class="feature-icon">
-                            <i class="ph ph-brain"></i>
-                        </div>
-
-                        <div>
-                            <h3>Glow AI</h3>
-                            <p>Habla, pregunta y recibe orientación.</p>
-                        </div>
-
-                        <i class="ph ph-arrow-up-right card-arrow"></i>
-                    </button>
-
-
-                    <button class="feature-card green" data-go="wellness">
-                        <div class="feature-icon">
-                            <i class="ph ph-leaf"></i>
-                        </div>
-
-                        <div>
-                            <h3>Bienestar</h3>
-                            <p>Ejercicios sencillos para relajarte.</p>
-                        </div>
-
-                        <i class="ph ph-arrow-up-right card-arrow"></i>
-                    </button>
-
-
-                    <button class="feature-card blue" data-go="games">
-                        <div class="feature-icon">
-                            <i class="ph ph-game-controller"></i>
-                        </div>
-
-                        <div>
-                            <h3>Juegos</h3>
-                            <p>Desconecta jugando unos minutos.</p>
-                        </div>
-
-                        <i class="ph ph-arrow-up-right card-arrow"></i>
-                    </button>
-
-
-                    <button class="feature-card orange" data-go="sounds">
-                        <div class="feature-icon">
-                            <i class="ph ph-waveform"></i>
-                        </div>
-
-                        <div>
-                            <h3>Sonidos</h3>
-                            <p>Crea tu ambiente de calma.</p>
-                        </div>
-
-                        <i class="ph ph-arrow-up-right card-arrow"></i>
-                    </button>
-
-                </div>
-
-
-                <div class="daily-card">
-
-                    <div class="daily-icon">
-                        ✨
-                    </div>
-
-                    <div>
-                        <span>MENSAJE DEL DÍA</span>
-
-                        <h3>
-                            No tienes que resolver todo de una vez.
-                        </h3>
-
-                        <p>
-                            Un pequeño paso también cuenta.
-                        </p>
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- ================= AI ================= -->
-
-            <section class="page-section" id="section-ai">
-
-                <div class="page-header">
-
-                    <span class="eyebrow">INTELIGENCIA ARTIFICIAL</span>
-
-                    <h1>Glow AI</h1>
-
-                    <p>
-                        Tu asistente de Mind Glow para conversar,
-                        organizarte y buscar estrategias saludables
-                        para afrontar momentos difíciles.
-                    </p>
-
-                </div>
-
-
-                <!-- TU CHAT ORIGINAL -->
-
-                <main id="chat-container">
-
-                    <header id="chat-header">
-
-                        <div class="header-info">
-
-                            <div class="ai-avatar">
-
-                                <i class="ph-fill ph-sparkle"></i>
-
-                                <span class="status-dot"></span>
-
-                            </div>
-
-                            <div class="header-text">
-
-                                <h1>Glow AI</h1>
-
-                                <span class="status-text">
-                                    <i class="ph-fill ph-circle"></i>
-                                    En línea • MindGlow
-                                </span>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="header-actions">
-
-                            <button
-                                class="action-btn"
-                                id="clear-chat-btn"
-                                title="Reiniciar chat">
-
-                                <i class="ph-bold ph-arrows-clockwise"></i>
-
-                            </button>
-
-                        </div>
-
-                    </header>
-
-
-                    <section id="chat-messages" aria-live="polite">
-
-                        <article class="welcome-card">
-
-                            <h2>
-                                <i class="ph-fill ph-robot"></i>
-                                ¡Hola, bienvenido!
-                            </h2>
-
-                            <p>
-                                Soy tu asistente <strong>Glow AI</strong>.
-                                Estoy aquí para ayudarte a organizarte,
-                                relajarte o responder lo que necesites.
-                            </p>
-
-                            <div class="badge-list">
-
-                                <span class="badge-item">
-                                    <i class="ph-fill ph-lightning"></i>
-                                    Rápido
-                                </span>
-
-                                <span class="badge-item">
-                                    <i class="ph-fill ph-brain"></i>
-                                    Inteligente
-                                </span>
-
-                                <span class="badge-item">
-                                    <i class="ph-fill ph-heartbeat"></i>
-                                    Bienestar
-                                </span>
-
-                            </div>
-
-                        </article>
-
-
-                        <div id="typing-indicator" class="hidden">
-
-                            <article class="message ai-message">
-
-                                <div class="message-content typing-dots">
-
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-
-                                </div>
-
-                            </article>
-
-                        </div>
-
-                    </section>
-
-
-                    <nav id="quick-replies">
-
-                        <button
-                            class="quick-btn"
-                            onclick="sendQuickMessage('👋 ¡Hola Glow!')">
-
-                            👋 Hola
-
-                        </button>
-
-                        <button
-                            class="quick-btn"
-                            onclick="sendQuickMessage('🤯 Tengo estrés por las tareas')">
-
-                            🧠 Estrés
-
-                        </button>
-
-                        <button
-                            class="quick-btn"
-                            onclick="sendQuickMessage('🌱 Dame un consejo de estudio')">
-
-                            🌱 Tips
-
-                        </button>
-
-                        <button
-                            class="quick-btn"
-                            onclick="sendQuickMessage('⚡ Dame motivación para hoy')">
-
-                            ⚡ Ánimo
-
-                        </button>
-
-                        <button
-                            class="quick-btn"
-                            onclick="sendQuickMessage('😂 Cuéntame algo divertido')">
-
-                            😄 Chill
-
-                        </button>
-
-                    </nav>
-
-
-                    <form id="chat-form">
-
-                        <div class="input-wrapper">
-
-                            <input
-                                type="text"
-                                id="chat-input"
-                                placeholder="Escribe un mensaje..."
-                                autocomplete="off"
-                                required
-                            />
-
-                        </div>
-
-                        <button
-                            type="submit"
-                            id="send-btn">
-
-                            <i class="ph-fill ph-paper-plane-tilt"></i>
-
-                        </button>
-
-                    </form>
-
-                </main>
-
-            </section>
-
-
-            <!-- ================= WELLNESS ================= -->
-
-            <section class="page-section" id="section-wellness">
-
-                <div class="page-header">
-
-                    <span class="eyebrow">BIENESTAR</span>
-
-                    <h1>Un momento para ti.</h1>
-
-                    <p>
-                        Elige una actividad y tómate unos minutos.
-                    </p>
-
-                </div>
-
-
-                <div class="breathing-card">
-
-                    <div class="breathing-circle" id="breathingCircle">
-
-                        <div>
-                            <span id="breathingText">LISTO</span>
-                            <small id="breathingTimer">60 s</small>
-                        </div>
-
-                    </div>
-
-
-                    <div class="breathing-info">
-
-                        <span class="eyebrow">RESPIRACIÓN</span>
-
-                        <h2>Respira conmigo</h2>
-
-                        <p>
-                            Sigue el círculo lentamente.
-                            No necesitas hacerlo perfecto.
-                        </p>
-
-                        <button
-                            class="primary-btn"
-                            id="breathingStart">
-
-                            <i class="ph ph-play"></i>
-                            Comenzar
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- ================= GAMES ================= -->
-
-            <section class="page-section" id="section-games">
-
-                <div class="page-header">
-
-                    <span class="eyebrow">MOMENTO PLAY</span>
-
-                    <h1>Juega. Desconecta. Vuelve.</h1>
-
-                    <p>
-                        Pequeñas experiencias para cambiar de ritmo.
-                    </p>
-
-                </div>
-
-
-                <div class="games-grid">
-
-                    <div class="game-card">
-
-                        <div class="game-icon">🫧</div>
-
-                        <h3>Bubble Calm</h3>
-
-                        <p>
-                            Revienta las burbujas y consigue puntos.
-                        </p>
-
-                        <div class="game-score">
-                            Puntos:
-                            <strong id="bubbleScore">0</strong>
-                        </div>
-
-                        <button
-                            class="primary-btn"
-                            id="bubbleGame">
-
-                            Jugar
-
-                        </button>
-
-                    </div>
-
-
-                    <div class="game-card">
-
-                        <div class="game-icon">⚡</div>
-
-                        <h3>Focus Tap</h3>
-
-                        <p>
-                            Pon a prueba tu concentración.
-                        </p>
-
-                        <div class="game-score">
-                            Puntos:
-                            <strong id="focusScore">0</strong>
-                        </div>
-
-                        <button
-                            class="primary-btn"
-                            id="focusGame">
-
-                            Jugar
-
-                        </button>
-
-                    </div>
-
-
-                    <div class="game-card">
-
-                        <div class="game-icon">🧠</div>
-
-                        <h3>Memory Glow</h3>
-
-                        <p>
-                            Memoriza la secuencia.
-                        </p>
-
-                        <div class="game-score">
-                            Nivel:
-                            <strong id="memoryLevel">1</strong>
-                        </div>
-
-                        <button
-                            class="primary-btn"
-                            id="memoryGame">
-
-                            Jugar
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- ================= FOCUS ================= -->
-
-            <section class="page-section" id="section-focus">
-
-                <div class="page-header">
-
-                    <span class="eyebrow">PRODUCTIVIDAD</span>
-
-                    <h1>Focus Mode</h1>
-
-                    <p>
-                        Un espacio sencillo para concentrarte.
-                    </p>
-
-                </div>
-
-
-                <div class="focus-card">
-
-                    <div class="focus-time" id="focusTimer">
-                        25:00
-                    </div>
-
-                    <span>
-                        Sesión de concentración
-                    </span>
-
-                    <div class="focus-controls">
-
-                        <button
-                            class="primary-btn"
-                            id="focusStart">
-
-                            <i class="ph ph-play"></i>
-                            Iniciar
-
-                        </button>
-
-                        <button
-                            class="secondary-btn"
-                            id="focusReset">
-
-                            Reiniciar
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-
-            <!-- ================= SOUNDS ================= -->
-
-            <section class="page-section" id="section-sounds">
-
-                <div class="page-header">
-
-                    <span class="eyebrow">AMBIENTE</span>
-
-                    <h1>Soundscape</h1>
-
-                    <p>
-                        Elige un ambiente para acompañar tu momento.
-                    </p>
-
-                </div>
-
-
-                <div class="sounds-grid">
-
-                    <button class="sound-card" data-sound="rain">
-
-                        <span>🌧️</span>
-
-                        <strong>Lluvia</strong>
-
-                        <small>Ambiente suave</small>
-
-                    </button>
-
-
-                    <button class="sound-card" data-sound="ocean">
-
-                        <span>🌊</span>
-
-                        <strong>Océano</strong>
-
-                        <small>Olas relajantes</small>
-
-                    </button>
-
-
-                    <button class="sound-card" data-sound="forest">
-
-                        <span>🌿</span>
-
-                        <strong>Bosque</strong>
-
-                        <small>Naturaleza</small>
-
-                    </button>
-
-
-                    <button class="sound-card" data-sound="night">
-
-                        <span>🌙</span>
-
-                        <strong>Noche</strong>
-
-                        <small>Ambiente nocturno</small>
-
-                    </button>
-
-                </div>
-
-
-                <div class="sound-status" id="soundStatus">
-                    🔇 Selecciona un ambiente
-                </div>
-
-            </section>
-
-
-            <!-- ================= SCHOOL ================= -->
-
-            <section class="page-section" id="section-school">
-
-                <div class="school-hero">
-
-                    <div class="school-logo">
-                        🏫
-                    </div>
-
-                    <div>
-
-                        <span class="eyebrow">
-                            MI COMUNIDAD
-                        </span>
-
-                        <h1>
-                            I.E. San José Obrero
-                        </h1>
-
-                        <p>
-                            Mind Glow nace desde nuestra comunidad
-                            educativa para promover el bienestar
-                            y el desarrollo de los estudiantes.
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <div class="school-grid">
-
-                    <div class="info-card">
-
-                        <i class="ph ph-student"></i>
-
-                        <h3>
-                            Estudiantes
-                        </h3>
-
-                        <p>
-                            Un espacio pensado para acompañar
-                            el día a día escolar.
-                        </p>
-
-                    </div>
-
-
-                    <div class="info-card">
-
-                        <i class="ph ph-lightbulb"></i>
-
-                        <h3>
-                            Innovación
-                        </h3>
-
-                        <p>
-                            Tecnología aplicada al bienestar
-                            de nuestra comunidad.
-                        </p>
-
-                    </div>
-
-
-                    <div class="info-card">
-
-                        <i class="ph ph-heart"></i>
-
-                        <h3>
-                            Bienestar
-                        </h3>
-
-                        <p>
-                            Promovemos hábitos saludables y
-                            espacios de reflexión.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-        </div>
-
+    <main class="main">
+      <header class="topbar glass">
+        <div class="topbar-left"><button id="mobileMenu" class="icon-btn only-mobile">☰</button><div><span class="top-kicker" id="pageKicker">MIND GLOW 2.1</span><h2 id="pageTitle">Inicio</h2></div></div>
+        <div class="topbar-actions"><button id="soundBtn" class="icon-btn" title="Sonido">🔊</button><button id="profileBtn" class="avatar">J</button></div>
+      </header>
+
+      <div class="content">
+        <section class="view active" id="view-home">
+          <div class="hero glass">
+            <div class="hero-copy"><p class="eyebrow">BUENOS DÍAS · I.E. SAN JOSÉ OBRERO</p><h1>Una app que <span>se siente viva.</span></h1><p class="lead">Mind Glow 2.0 convierte el bienestar digital en una experiencia: juega, respira, estudia, escucha y habla con Glow AI.</p><div class="hero-actions"><button class="btn primary" data-view="ai">Hablar con Glow AI</button><button class="btn ghost" data-view="arcade">Explorar Arcade</button></div><div class="signal-row"><span>● Sistema en línea</span><span id="dailyStreak">Racha 0 días</span></div></div>
+            <div class="hero-visual"><div class="hero-ring r1"></div><div class="hero-ring r2"></div><div class="hero-core"><img src="assets/mindglow-logo.png" alt="Mind Glow"></div><span class="float-tag t1">+XP</span><span class="float-tag t2">AI</span><span class="float-tag t3">ZEN</span></div>
+          </div>
+          <div class="section-head"><div><p class="eyebrow">ACCESO RÁPIDO</p><h3>¿Qué necesitas ahora?</h3></div></div>
+          <div class="quick-grid"><button class="quick-card" data-view="calm"><span>🌿</span><b>Calmarme</b><small>Respiración + música</small></button><button class="quick-card" data-view="focus"><span>🎯</span><b>Concentrarme</b><small>Pomodoro flexible</small></button><button class="quick-card" data-view="arcade"><span>🎮</span><b>Despejarme</b><small>Arcade + secretos</small></button><button class="quick-card" data-view="space"><span>🌌</span><b>Glow Space</b><small>Tu universo evoluciona</small></button></div>
+          <div class="home-grid"><article class="glass panel recommendation"><div class="panel-label">RECOMENDADO PARA TI</div><h3 id="recommendTitle">Una pausa también es avanzar.</h3><p id="recommendText">Haz un minuto de respiración antes de continuar.</p><button class="text-link" data-view="calm">Empezar →</button></article><article class="glass panel stats"><div class="panel-label">HOY</div><div class="stats-grid"><div><b id="statCalm">0</b><small>min calma</small></div><div><b id="statFocus">0</b><small>focus</small></div><div><b id="statGames">0</b><small>juegos</small></div><div><b id="statTasks">0</b><small>tareas</small></div></div></article></div>
+          <div class="section-head"><div><p class="eyebrow">CHECK-IN</p><h3>¿Cómo llegas hoy?</h3></div><span id="moodLabel" class="pill">Sin registrar</span></div>
+          <div class="mood-row" id="moodRow"><button data-mood="😊|Muy bien">😊<small>Muy bien</small></button><button data-mood="🙂|Bien">🙂<small>Bien</small></button><button data-mood="😐|Normal">😐<small>Normal</small></button><button data-mood="😟|Preocupado">😟<small>Preocupado</small></button><button data-mood="😔|Triste">😔<small>Triste</small></button><button data-mood="😣|Estresado">😣<small>Estresado</small></button></div>
+        </section>
+
+        <section class="view" id="view-ai"><div class="page-title"><p class="eyebrow">ASISTENTE PERSONAL</p><h1>Glow <span>AI</span></h1><p>Una IA local de bienestar con memoria contextual, acciones rápidas y respuestas adaptativas.</p></div><div class="ai-layout"><div class="glass ai-shell"><div class="ai-head"><div class="ai-orb">✦</div><div><b>Glow AI 2.0</b><small id="aiStatus">Lista para escucharte</small></div><span class="online-dot"></span></div><div id="chatMessages" class="chat"></div><div class="ai-actions"><button data-prompt="Estoy estresado por las tareas">Estrés</button><button data-prompt="No puedo concentrarme">Concentración</button><button data-prompt="Quiero relajarme">Calma</button><button data-prompt="Necesito organizarme">Organizarme</button></div><form id="chatForm" class="chat-form"><input id="chatInput" autocomplete="off" placeholder="Cuéntame qué necesitas..."><button aria-label="Enviar">↑</button></form></div><aside class="ai-side"><div class="glass panel"><div class="panel-label">ACCIONES</div><button class="action-tile" data-view="calm">🌿 Abrir Calma</button><button class="action-tile" data-view="focus">🎯 Abrir Focus</button><button class="action-tile" data-view="tasks">✓ Ver tareas</button><button class="action-tile" data-view="arcade">🎮 Jugar</button></div><div class="glass panel"><div class="panel-label">CONTEXTO</div><p id="aiContext">Sin datos suficientes todavía.</p></div></aside></div></section>
+
+        <section class="view" id="view-calm"><div class="page-title"><p class="eyebrow">GLOW CALM</p><h1>Vuelve a tu <span>centro.</span></h1><p>Respiración guiada, sonidos y música original de Mind Glow.</p></div><div class="calm-grid"><div class="glass breathing panel-large"><div id="breathCircle" class="breath-circle"><div><span id="breathPhase">LISTO</span><b id="breathTimer">01:00</b></div></div><div class="segmented"><button class="active" data-breath="60">1 min</button><button data-breath="180">3 min</button><button data-breath="300">5 min</button></div><div class="controls"><button class="btn primary" id="breathStart">▶ Iniciar</button><button class="btn ghost" id="breathReset">↻ Reiniciar</button></div></div><div class="glass sound-stack"><div class="panel-label">AMBIENTES</div><div class="sound-grid"><button data-sound="rain">🌧️<b>Lluvia</b><small>Suave</small></button><button data-sound="ocean">🌊<b>Océano</b><small>Olas</small></button><button data-sound="forest">🌲<b>Bosque</b><small>Naturaleza</small></button><button data-sound="river">💧<b>Río</b><small>Agua</small></button></div><div class="music-card"><div class="panel-label">MINDGLOW MUSIC</div><div class="music-title" id="musicTitle">Brilla, Brilla</div><small id="musicSubtitle">MindGlow Original</small><div class="music-controls"><button id="musicPrev">⏮</button><button class="play" id="musicPlay">▶</button><button id="musicNext">⏭</button></div><input id="musicProgress" type="range" min="0" max="100" value="0"><div class="music-times"><span id="musicCurrent">0:00</span><span id="musicDuration">0:00</span></div></div></div></div></section>
+
+        <section class="view" id="view-arcade"><div class="page-title"><p class="eyebrow">GLOW ARCADE · V2</p><h1>Juega, <span>descubre.</span></h1><p>Más mecánicas, más feedback, más secretos. Pulsa <b>K</b> durante un juego para descubrir algo.</p></div><div class="arcade-toolbar glass"><div class="difficulty" id="difficulty"><button class="active" data-level="easy">Fácil</button><button data-level="normal">Normal</button><button data-level="hard">Difícil</button></div><div class="arcade-stats"><span>🏆 Récord <b id="globalHigh">0</b></span><span>🎮 Partidas <b id="globalGames">0</b></span></div></div><div class="game-grid v2" id="gameGrid"></div></section>
+
+        <section class="view" id="view-focus"><div class="page-title"><p class="eyebrow">GLOW FOCUS</p><h1>Una cosa a la <span>vez.</span></h1><p>Sesiones configurables, pausas y ciclos de descanso.</p></div><div class="focus-layout"><div class="glass focus-card"><div class="focus-ring" id="focusRing"><div><span id="focusModeLabel">TRABAJO</span><b id="focusTime">25:00</b><small id="focusStatus">Listo</small></div></div><div class="focus-presets"><button data-focus="15">15 min</button><button class="active" data-focus="25">25 min</button><button data-focus="45">45 min</button><button data-focus="60">60 min</button><label>Personalizado <input id="focusCustom" type="number" min="1" max="180" placeholder="min"></label></div><div class="focus-modes"><button class="active" data-mode="work">Trabajo / Estudio</button><button data-mode="short">Descanso corto</button><button data-mode="long">Descanso largo</button></div><input id="focusTask" class="text-input" value="Sesión de concentración" placeholder="¿En qué te enfocarás?"><div class="controls"><button class="btn primary" id="focusStart">▶ Comenzar</button><button class="btn ghost" id="focusPause">⏸ Pausar</button><button class="btn ghost" id="focusReset">↻ Reiniciar</button><button class="btn danger" id="focusCancel">✕ Cancelar</button></div><div class="focus-note" id="focusNote">Trabajo → 25 min · Descanso corto → 5 min · Descanso largo → 15 min</div></div></div></section>
+
+        <section class="view" id="view-tasks"><div class="page-title"><p class="eyebrow">MY TASKS</p><h1>Hazlo <span>simple.</span></h1><p>Convierte lo grande en pasos pequeños.</p></div><div class="tasks-grid"><form class="glass panel" id="taskForm"><div class="panel-label">NUEVA TAREA</div><input id="taskInput" class="text-input" placeholder="Ej. Terminar exposición" required><select id="taskPriority" class="text-input"><option>Baja</option><option selected>Media</option><option>Alta</option></select><button class="btn primary">+ Añadir</button></form><div class="glass panel"><div class="panel-label">PENDIENTES · <span id="taskCount">0</span></div><div id="taskList" class="task-list"></div></div></div></section>
+
+        <section class="view" id="view-journal"><div class="page-title"><p class="eyebrow">MY JOURNAL</p><h1>Escribe para <span>soltar.</span></h1><p>Tu diario permanece en este dispositivo.</p></div><div class="journal-grid"><div class="glass panel"><div class="mood-row compact" id="journalMood"><button>😊</button><button>🙂</button><button>😐</button><button>😟</button><button>😔</button></div><input id="journalTitle" class="text-input" placeholder="Título de hoy"><textarea id="journalText" class="text-input" rows="10" placeholder="¿Qué ocurrió hoy?"></textarea><button class="btn primary" id="saveJournal">Guardar entrada</button></div><div class="glass panel"><div class="panel-label">HISTORIAL</div><div id="journalList" class="journal-list"></div></div></div></section>
+
+        <section class="view" id="view-school">
+  <div class="page-title">
+    <p class="eyebrow">NUESTRA COMUNIDAD</p>
+    <h1>I.E. <span>San José Obrero.</span></h1>
+    <p>Información de la institución, recursos oficiales y un espacio para que la comunidad deje su opinión sobre Mind Glow.</p>
+  </div>
+
+  <div class="school-hero glass">
+    <img src="assets/ie-san-jose-obrero.png" alt="Escudo de la I.E. 162 San José Obrero" class="school-emblem-img">
+    <div class="school-hero-copy">
+      <div class="eyebrow">I.E. N.° 162 · UGEL 05</div>
+      <h2>San José Obrero</h2>
+      <p>Mariscal Cáceres · San Juan de Lurigancho · Lima</p>
+      <div class="school-tags"><span>Código modular 1070036</span><span>Secundaria técnica</span><span>Innovación educativa</span></div>
+      <div class="school-actions">
+        <a class="btn primary" href="https://www.sanjoseobrero.edu.pe/" target="_blank" rel="noopener">Visitar web oficial ↗</a>
+        <a class="btn ghost" href="https://www.sanjoseobrero.edu.pe/nosotros/historia" target="_blank" rel="noopener">Ver historia</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="school-facts-grid">
+    <article class="glass panel school-fact"><div class="fact-icon">🏫</div><div class="panel-label">INSTITUCIÓN</div><h3>Una comunidad educativa técnica</h3><p>La institución cuenta con primaria y secundaria técnica, junto con talleres de producción y servicio, biblioteca, laboratorio, espacios deportivos y un Aula de Innovación Pedagógica equipada con tecnología.</p></article>
+    <article class="glass panel school-fact"><div class="fact-icon">💡</div><div class="panel-label">INNOVACIÓN</div><h3>Google Workspace for Education</h3><p>La institución impulsa el uso educativo de Google Workspace for Education Fundamentals para fortalecer las competencias digitales y la colaboración entre docentes, estudiantes y familias.</p></article>
+    <article class="glass panel school-fact"><div class="fact-icon">🌱</div><div class="panel-label">MISIÓN · VISIÓN</div><h3>Formación integral</h3><p>Su misión plantea una formación humanista, científica y tecnológica con valores; la visión al 2028 busca fortalecer identidad, aprendizajes, liderazgo, emprendimiento y conciencia ambiental.</p></article>
+  </div>
+
+  <div class="section-head school-section-head"><div><p class="eyebrow">INFORMACIÓN DESPLEGABLE</p><h3>Conoce mejor nuestro colegio</h3></div></div>
+  <div class="accordion" id="schoolAccordion">
+    <button class="accordion-item"><span>🎓</span><div><b>Estudiantes</b><small>Recursos, servicios y orientación</small></div><i>＋</i></button>
+    <div class="accordion-panel">
+      <p>La web oficial reúne recursos para la comunidad educativa. Puedes consultar la biblioteca virtual, trámites documentarios y materiales de apoyo.</p>
+      <div class="resource-links">
+        <a href="https://www.sanjoseobrero.edu.pe/recursos/biblioteca" target="_blank" rel="noopener">📚 Biblioteca virtual ↗</a>
+        <a href="https://www.sanjoseobrero.edu.pe/tramite" target="_blank" rel="noopener">📝 Trámite documentario ↗</a>
+        <a href="https://www.sanjoseobrero.edu.pe/recursos/apoyo-docente" target="_blank" rel="noopener">💻 Recursos y guías ↗</a>
+      </div>
+    </div>
+
+    <button class="accordion-item"><span>💡</span><div><b>Innovación</b><small>Proyectos, tecnología y especialidades</small></div><i>＋</i></button>
+    <div class="accordion-panel">
+      <p>La institución integra tecnología en el aprendizaje y cuenta con especialidades técnicas como ebanistería, mecánica de producción, mecánica automotriz, industria del vestido y computación e informática.</p>
+      <div class="resource-links">
+        <a href="https://www.sanjoseobrero.edu.pe/inicio" target="_blank" rel="noopener">🌐 Recursos digitales oficiales ↗</a>
+        <a href="https://www.sanjoseobrero.edu.pe/recursos/galer%C3%ADa-escolar-virtual" target="_blank" rel="noopener">🎞️ Galería escolar virtual ↗</a>
+      </div>
+    </div>
+
+    <button class="accordion-item"><span>💚</span><div><b>Bienestar</b><small>Valores, acompañamiento y comunidad</small></div><i>＋</i></button>
+    <div class="accordion-panel">
+      <p>Mind Glow conecta el bienestar digital con la comunidad educativa: pausas, respiración, organización y un espacio seguro para expresar necesidades. La institución declara como eje la formación integral y la práctica de valores.</p>
+      <div class="resource-links">
+        <a href="https://www.sanjoseobrero.edu.pe/nosotros/visi%C3%B3n-misi%C3%B3n" target="_blank" rel="noopener">🧭 Misión y visión ↗</a>
+        <a href="https://www.sanjoseobrero.edu.pe/nosotros/directivos" target="_blank" rel="noopener">👥 Directivos ↗</a>
+      </div>
+    </div>
+
+    <button class="accordion-item"><span>📍</span><div><b>Contacto y ubicación</b><small>Canales oficiales de la institución</small></div><i>＋</i></button>
+    <div class="accordion-panel">
+      <p>La institución pertenece a la UGEL 05 y se encuentra en la zona de San José Obrero, Mariscal Cáceres, San Juan de Lurigancho. Para información actualizada, utiliza siempre los canales oficiales.</p>
+      <div class="resource-links">
+        <a href="https://www.sanjoseobrero.edu.pe/cont%C3%A1ctenos" target="_blank" rel="noopener">📬 Contáctenos ↗</a>
+        <a href="https://www.sanjoseobrero.edu.pe/nosotros/historia" target="_blank" rel="noopener">📖 Reseña histórica ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass feedback-card">
+    <div class="feedback-top"><div><p class="eyebrow">TU VOZ</p><h3>¿Qué opinas de Mind Glow?</h3><p>Tu opinión nos ayuda a mejorar el prototipo. No pedimos datos personales.</p></div><span class="feedback-badge">💬 Comunidad</span></div>
+    <div class="feedback-stars" id="feedbackStars" aria-label="Calificación"><button type="button" data-rating="1">★</button><button type="button" data-rating="2">★</button><button type="button" data-rating="3">★</button><button type="button" data-rating="4">★</button><button type="button" data-rating="5">★</button></div>
+    <p class="feedback-rating-text" id="feedbackRatingText">Elige una calificación</p>
+    <div class="feedback-grid"><label><span>¿Qué te gustó?</span><select id="feedbackLike"><option value="">Selecciona una opción</option><option>La interfaz</option><option>Glow AI</option><option>Los juegos</option><option>Los sonidos y la música</option><option>Focus y organización</option><option>Mi colegio</option></select></label><label><span>¿Qué mejorarías?</span><select id="feedbackImprove"><option value="">Selecciona una opción</option><option>Más juegos</option><option>Mejorar la IA</option><option>Más sonidos y música</option><option>Más información del colegio</option><option>Más personalización</option><option>Todo está bien</option></select></label></div>
+    <textarea id="feedbackText" rows="4" placeholder="Escribe una idea, crítica o sugerencia..."></textarea>
+    <div class="feedback-actions"><button class="btn primary" id="feedbackSend">Enviar opinión</button><small id="feedbackStatus">Tus comentarios se guardan localmente en este dispositivo.</small></div>
+  </div>
+</section>
+
+<section class="view" id="view-space"><div class="page-title"><p class="eyebrow">GLOW SPACE</p><h1>Tu universo <span>crece contigo.</span></h1><p>Tu actividad desbloquea nuevas capas del espacio.</p></div><div class="space glass"><div class="stars-layer" id="starsLayer"></div><div class="planet"></div><div class="space-glow"></div><div class="space-ground"></div><div class="space-caption">Nivel <b id="spaceLevel">1</b> · <b id="spaceXP">0</b> XP</div></div></section>
+
+        <section class="view" id="view-profile"><div class="page-title"><p class="eyebrow">MY GLOW</p><h1>Tu progreso, <span>a tu ritmo.</span></h1></div><div class="profile-grid"><div class="glass profile-card"><div class="big-avatar">J</div><div><h2>Jack</h2><p>Explorador Mental · Nivel <b id="profileLevel">1</b></p><div class="xp-track large"><i id="profileXPBar"></i></div><small><b id="profileXP">0</b> XP</small></div></div><div class="glass panel"><div class="panel-label">LOGROS</div><div class="achievements" id="achievements"></div></div></div></section>
+
+        <section class="view" id="view-settings"><div class="page-title"><p class="eyebrow">CONFIGURACIÓN</p><h1>Hazlo <span>tuyo.</span></h1></div><div class="glass settings"><label><span><b>Sonidos</b><small>Feedback y ambientes</small></span><input type="checkbox" id="settingsSound" checked></label><label><span><b>Reducir movimiento</b><small>Menos animación</small></span><input type="checkbox" id="settingsMotion"></label><button class="btn danger" id="resetData">Eliminar datos locales</button></div></section>
+      </div>
     </main>
+  </div>
 
-</div>
-
-
-<!-- =========================================================
-     TOAST
-========================================================= -->
-
-<div class="toast" id="toast">
-    <i class="ph ph-sparkle"></i>
-    <span id="toastText">Mind Glow</span>
-</div>
-
-
-<!-- TU SCRIPT -->
-<script src="script.js"></script>
-
+  <div id="gameModal" class="modal hidden"><div class="modal-backdrop"></div><div class="modal-card glass"><button id="gameClose" class="modal-close">×</button><div class="game-modal-head"><span id="gameIcon">🫧</span><div><p class="eyebrow">GLOW ARCADE</p><h2 id="gameName">Bubble Calm</h2><small id="gameDesc"></small></div></div><div id="gameBody"></div></div></div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="script.js"></script>
 </body>
 </html>
