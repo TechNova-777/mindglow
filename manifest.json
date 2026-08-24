@@ -1,0 +1,11 @@
+{
+  "name": "Mind Glow — Mente Sana",
+  "short_name": "Mind Glow",
+  "description": "Bienestar digital, concentración, juegos y Glow AI para estudiantes.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090b12",
+  "theme_color": "#0b0d16",
+  "lang": "es"
+}
