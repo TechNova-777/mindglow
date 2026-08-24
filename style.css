@@ -443,3 +443,23 @@ button,input,textarea,select{font:inherit;color:inherit}
 .donate-row{display:flex;gap:10px;align-items:center}
 .donate-row code{flex:1;background:rgba(255,255,255,.06);border:1px solid var(--line);
   border-radius:10px;padding:10px 12px;font-size:15px;letter-spacing:.05em;color:#e6e2ff}
+
+/* ===== PULIDO VISUAL 3.1 ===== */
+body{font-family:'Inter',system-ui,-apple-system,sans-serif}
+h1,h2,h3,.brand-copy strong,.btn,.eyebrow{font-family:'Poppins','Inter',sans-serif}
+.welcome-card h1 span{background:linear-gradient(90deg,#8b7cff,#51e0c0,#ffd166,#8b7cff);
+  background-size:300% 100%;-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;animation:gradFlow 6s linear infinite}
+@keyframes gradFlow{to{background-position:300% 0}}
+.float-emoji{position:absolute;font-size:46px;opacity:.55;pointer-events:none;z-index:1;
+  filter:drop-shadow(0 0 16px rgba(139,124,255,.5));animation:floatY 7s ease-in-out infinite}
+@keyframes floatY{50%{transform:translateY(-24px) rotate(9deg);opacity:.9}}
+.btn.primary.xl{animation:pulseCta 2.6s ease-in-out infinite}
+@keyframes pulseCta{50%{transform:scale(1.045);box-shadow:0 14px 44px rgba(125,113,255,.5)}}
+.view.active{animation:viewIn .45s ease both}
+@keyframes viewIn{from{opacity:0;transform:translateY(14px)}}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(125,113,255,.35);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(125,113,255,.65);border:2px solid transparent;background-clip:content-box}
+::selection{background:rgba(125,113,255,.45)}
