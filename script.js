@@ -5,6 +5,7 @@
    console.cloud.google.com → Credenciales → OAuth (tipo Web)
    ============================================================ */
 const GOOGLE_CLIENT_ID = ''; // ← PEGA AQUÍ TU CLIENT ID DE GOOGLE
+const FORMSPREE_ID     = 'mqpzondw'; // ← ID de Formspree: los comentarios llegan al correo del equipo
 
 /* ---------- Utilidades ---------- */
 const $  = s => document.querySelector(s);
@@ -787,6 +788,22 @@ function feedbackInit(){
       like:$('#feedbackLike').value, improve:$('#feedbackImprove').value,
       text:$('#feedbackText').value.trim().slice(0,500), date:today() });
     save(); sfx('good'); toast('💬 ¡Gracias por tu opinión!');
+    if(FORMSPREE_ID){
+      fetch('https://formspree.io/f/'+FORMSPREE_ID, {
+        method:'POST',
+        headers:{ 'Accept':'application/json', 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          _subject: '⭐ Nuevo comentario Mind Glow ('+fbRating+'/5)',
+          calificacion: fbRating+' de 5 estrellas',
+          les_gusto: $('#feedbackLike').value || '(no respondió)',
+          mejorar: $('#feedbackImprove').value || '(no respondió)',
+          comentario: $('#feedbackText').value.trim() || '(sin comentario)',
+          fecha: today()
+        })
+      })
+      .then(r => r.ok ? toast('📨 ¡Enviado al equipo Mind Glow!') : Promise.reject())
+      .catch(() => toast('Guardado en este dispositivo (sin conexión)'));
+    }
     $('#feedbackStatus').textContent = '✅ Guardado ('+state.feedback.length+
       ' opinió'+(state.feedback.length>1?'nes':'n')+' en este dispositivo). Aparecen abajo ↓';
     $('#feedbackLike').value=''; $('#feedbackImprove').value=''; $('#feedbackText').value='';
