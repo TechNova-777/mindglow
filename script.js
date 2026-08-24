@@ -6,6 +6,9 @@
    ============================================================ */
 const GOOGLE_CLIENT_ID = ''; // ← PEGA AQUÍ TU CLIENT ID DE GOOGLE
 const FORMSPREE_ID     = 'mqpzondw'; // ← ID de Formspree: los comentarios llegan al correo del equipo
+const DONATE_YAPE      = '999 888 777'; // ← CAMBIA por el número de Yape del equipo
+const DONATE_PLIN      = '999 888 777'; // ← CAMBIA por el número de Plin
+const DONATE_KOFI      = '';            // ← opcional: enlace tipo https://ko-fi.com/mindglow
 
 /* ---------- Utilidades ---------- */
 const $  = s => document.querySelector(s);
@@ -1699,6 +1702,30 @@ function topbarInit(){
   });
 }
 
+function donateInit(){
+  $('#yapeNum').textContent = DONATE_YAPE;
+  $('#plinNum').textContent = DONATE_PLIN;
+  if(DONATE_KOFI){
+    const k = $('#kofiLink');
+    k.href = DONATE_KOFI; k.style.display = 'block';
+  }
+  const open  = () => { $('#donateModal').classList.remove('hidden'); sfx('good'); };
+  const close = () => $('#donateModal').classList.add('hidden');
+  $('#donateBtn').addEventListener('click', open);
+  $('#donateClose').addEventListener('click', close);
+  $('#donateModal .modal-backdrop').addEventListener('click', close);
+  document.addEventListener('keydown', e => {
+    if(e.key==='Escape' && !$('#donateModal').classList.contains('hidden')) close();
+  });
+  const copy = (txt, ok) => {
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject())
+      .then(() => toast(ok))
+      .catch(() => toast(txt));
+  };
+  $('#copyYape').addEventListener('click', () => copy(DONATE_YAPE,'📲 Yape copiado: '+DONATE_YAPE));
+  $('#copyPlin').addEventListener('click', () => copy(DONATE_PLIN,'📲 Plin copiado: '+DONATE_PLIN));
+}
+
 /* ---------- Arranque ---------- */
 function init(){
   buildNav();
@@ -1717,6 +1744,7 @@ function init(){
   arcadeInit();
   settingsInit();
   renderTeam();
+  donateInit();
   document.body.classList.toggle('reduced-motion', state.reduced);
   $('#soundBtn').textContent = state.sound?'🔊':'🔇';
   ensureStreak();

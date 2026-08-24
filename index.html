@@ -50,6 +50,7 @@
           <div><span class="top-kicker" id="pageKicker">MIND GLOW 3.0</span><h2 id="pageTitle">Inicio</h2></div>
         </div>
         <div class="topbar-actions">
+          <button id="donateBtn" class="icon-btn" title="Donaciones">💜</button>
           <button id="soundBtn" class="icon-btn" title="Sonido">🔊</button>
           <button id="profileBtn" class="avatar" title="Perfil">J</button>
         </div>
@@ -457,6 +458,26 @@
         <div><p class="eyebrow">GLOW ARCADE</p><h2 id="gameName">Bubble Calm</h2><small id="gameDesc"></small></div>
       </div>
       <div id="gameBody"></div>
+    </div>
+  </div>
+  <div id="donateModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card glass">
+      <button id="donateClose" class="modal-close">×</button>
+      <p class="eyebrow">APOYA EL PROYECTO</p>
+      <h2>💜 Donaciones</h2>
+      <p class="game-message" style="margin-top:8px">
+        Mind Glow es creado por estudiantes de la I.E. San José Obrero.<br>
+        Con tu aporte mantenemos la web en línea y seguimos añadiendo juegos y mejoras. ¡Gracias! 🚀
+      </p>
+      <div class="donate-box">
+        <h3>📲 Yape</h3>
+        <div class="donate-row"><code id="yapeNum">—</code><button type="button" class="btn ghost" id="copyYape">Copiar</button></div>
+        <h3>📲 Plin</h3>
+        <div class="donate-row"><code id="plinNum">—</code><button type="button" class="btn ghost" id="copyPlin">Copiar</button></div>
+        <a id="kofiLink" class="btn primary" style="display:none;text-align:center;margin-top:14px" target="_blank" rel="noopener">☕ Donar internacionalmente (Ko-fi)</a>
+        <p class="game-message" style="margin-top:12px;font-size:12px;opacity:.7">Cualquier monto ayuda. ¡Comparte Mind Glow con tus amigos, eso también apoya!</p>
+      </div>
     </div>
   </div>
   <div id="toast" class="toast" role="status"></div>

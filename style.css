@@ -434,3 +434,12 @@ button,input,textarea,select{font:inherit;color:inherit}
 .chat-action-btn{border:none;border-radius:999px;padding:8px 14px;font-size:13px;cursor:pointer;
   background:linear-gradient(135deg,#7d71ff,#51e0c0);color:#0a0e22;font-weight:700;transition:.2s}
 .chat-action-btn:hover{transform:scale(1.06)}
+
+/* ---------- Donaciones ---------- */
+.donate-box{margin-top:18px;border:1px solid var(--line);border-radius:18px;padding:18px 20px;
+  background:rgba(125,113,255,.07)}
+.donate-box h3{font-size:14px;margin:12px 0 6px;color:#c9c2ff}
+.donate-box h3:first-child{margin-top:0}
+.donate-row{display:flex;gap:10px;align-items:center}
+.donate-row code{flex:1;background:rgba(255,255,255,.06);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;font-size:15px;letter-spacing:.05em;color:#e6e2ff}
