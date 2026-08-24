@@ -463,3 +463,33 @@ h1,h2,h3,.brand-copy strong,.btn,.eyebrow{font-family:'Poppins','Inter',sans-ser
 ::-webkit-scrollbar-thumb{background:rgba(125,113,255,.35);border-radius:99px;border:2px solid transparent;background-clip:content-box}
 ::-webkit-scrollbar-thumb:hover{background:rgba(125,113,255,.65);border:2px solid transparent;background-clip:content-box}
 ::selection{background:rgba(125,113,255,.45)}
+/* ===== BIENESTAR+ ===== */
+.wellness-test .quiz-progress{height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:10px}
+.quiz-progress i{display:block;height:100%;background:linear-gradient(90deg,#8b7cff,#51e0c0);border-radius:99px;transition:width .35s ease}
+.quiz-count{font-size:.75rem;color:var(--muted,#9aa0b5);letter-spacing:.08em;text-transform:uppercase}
+.quiz-q{font-size:1.25rem;margin:6px 0 16px}
+.quiz-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.quiz-opt{padding:14px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);color:#fff;cursor:pointer;display:flex;
+  flex-direction:column;gap:4px;align-items:center;font-family:'Poppins','Inter',sans-serif;
+  transition:border-color .2s,transform .2s,background .2s}
+.quiz-opt small{font-size:.65rem;opacity:.45;letter-spacing:.1em}
+.quiz-opt:hover{border-color:rgba(125,113,255,.7);background:rgba(125,113,255,.12);transform:translateY(-2px)}
+#resultBox h3{font-size:1.3rem;margin:8px 0}
+.result-icon{font-size:52px;line-height:1;margin-bottom:4px}
+.result-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.learn-list details{border-bottom:1px solid rgba(255,255,255,.07);padding:4px 0}
+.learn-list details:last-child{border-bottom:none}
+.learn-list summary{cursor:pointer;font-family:'Poppins','Inter',sans-serif;font-weight:600;
+  padding:12px 6px;border-radius:10px;list-style:none;display:flex;align-items:center;gap:8px;transition:background .2s}
+.learn-list summary::-webkit-details-marker{display:none}
+.learn-list summary::after{content:'＋';margin-left:auto;opacity:.5;transition:transform .25s}
+.learn-list details[open] summary::after{content:'−'}
+.learn-list summary:hover{background:rgba(255,255,255,.05)}
+.learn-list details p{padding:0 6px 14px;color:var(--text-dim,#c6cadb);line-height:1.65;font-size:.95rem}
+.help-card{display:flex;gap:18px;align-items:flex-start;border:1px solid rgba(255,107,139,.35);
+  background:linear-gradient(135deg,rgba(255,107,139,.09),rgba(139,124,255,.06))}
+.help-card h3{margin:6px 0 10px}
+.help-card ul{margin:0 0 10px;padding-left:20px;line-height:1.9}
+.help-note{font-size:.8rem;opacity:.55;font-style:italic}
+@media (max-width:700px){ .help-card{flex-direction:column} }

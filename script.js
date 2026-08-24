@@ -25,6 +25,7 @@ const defaultState = {
   tasks:[], journal:[], sound:true, reduced:false,
   streak:0, highScores:{}, lastDate:null, aiMemory:[],
   user:null,
+  wellnessLog:[],
   team:[{name:'JACK'},{name:'CAMILA'},{name:'CLARA'},{name:'ANDREA'},{name:'EDISON'}],
   feedback:[]
 };
@@ -39,6 +40,7 @@ function loadState(){
     s.tasks      = Array.isArray(s.tasks) ? s.tasks : [];
     s.journal    = Array.isArray(s.journal) ? s.journal : [];
     s.feedback   = Array.isArray(s.feedback) ? s.feedback : [];
+    s.wellnessLog= Array.isArray(s.wellnessLog) ? s.wellnessLog : [];
     s.team       = Array.isArray(s.team) ? s.team : [];
     if(!s.team.length || s.team.some(m => m.role) ||
        (s.team.length===1 && s.team[0].name==='Jack'))
@@ -102,9 +104,9 @@ function ensureStreak(){
 
 /* ---------- Navegación ---------- */
 const NAV = [['home','⌂','Inicio'],['ai','✦','Glow AI'],['calm','◌','Calma'],
-  ['arcade','⌁','Arcade'],['focus','◷','Focus'],['tasks','✓','Tareas'],
-  ['journal','▱','Diario'],['school','🏫','Mi colegio'],['space','✧','Glow Space'],
-  ['profile','○','Perfil']];
+  ['wellness','💚','Bienestar+'],['arcade','⌁','Arcade'],['focus','◷','Focus'],
+  ['tasks','✓','Tareas'],['journal','▱','Diario'],['school','🏫','Mi colegio'],
+  ['space','✧','Glow Space'],['profile','○','Perfil']];
 
 function buildNav(){
   $('#navList').innerHTML = NAV.map(n =>
@@ -120,6 +122,7 @@ function showView(v){
   if(v === 'tasks')   renderTasks();
   if(v === 'journal') renderJournal();
   if(v === 'school')  renderTeam();
+  if(v === 'wellness'){ wellnessInit(); wellnessRender(); }
   if(v === 'profile'){ renderTeam(); authInit(); }
   if(innerWidth < 800) $('#sidebar').classList.remove('open');
 }
@@ -1050,7 +1053,111 @@ const Space = (function(){
     }
     if(state.reduced) draw(16);
   }
-  function init(){
+/* ---------- Bienestar+ : test, tendencia y biblioteca ---------- */
+const WELLNESS_Q = [
+  {q:'¿Cómo has dormido esta semana?', opts:['Muy mal','Regular','Bien','Muy bien']},
+  {q:'¿Con qué frecuencia te sientes concentrado en clase?', opts:['Casi nunca','A veces','Seguido','Siempre']},
+  {q:'¿Sientes que puedes hablar de tus problemas con alguien?', opts:['No','Tal vez','La mayoría de veces','Siempre']},
+  {q:'¿Cómo manejas la presión de exámenes y tareas?', opts:['Me abruma','Con dificultad','Bien','Muy bien']},
+  {q:'¿Te dedicas tiempo a actividades que disfrutas?', opts:['Nunca','Rara vez','Varias veces/semana','Todos los días']},
+  {q:'¿Cómo está tu energía durante el día?', opts:['Agotada','Baja','Normal','Excelente']},
+  {q:'¿Usas el celular hasta quedarte dormido?', opts:['Siempre','Seguido','A veces','Nunca']},
+  {q:'¿Comes bien y tomas agua durante el día?', opts:['No','Muy poco','Regular','Sí, me cuido']},
+  {q:'¿Te sientes motivado con tus metas?', opts:['Nada','Poco','Algo','Muchísimo']},
+  {q:'¿Practicas respiración o pausas conscientes?', opts:['Nunca','Rara vez','A veces','Frecuentemente']}
+];
+const W_LEVELS = [
+  {min:0,max:12,icon:'💜',t:'Necesitas apoyo ahora mismo',
+   d:'Tu carga parece pesada, y no tienes que cargarla solo. Empieza con una respiración guiada de 1 minuto y habla con alguien de confianza: familia, orientador del colegio o Glow AI.',
+   go:['calm','🌿 Respirar 1 minuto'], help:true},
+  {min:13,max:19,icon:'🌤️',t:'Vas cargando más de lo que crees',
+   d:'Tu bienestar está a medias. Una rutina corta de Focus y dormir mejor cambiarían tu semana. Cuéntale a Glow AI cómo te sientes y arma un plan pequeño.',
+   go:['focus','🎯 Empezar Focus 25 min']},
+  {min:20,max:25,icon:'🌱',t:'¡Vas bien, con margen para crecer!',
+   d:'Buen nivel de bienestar. Mantén tus hábitos y súmale un reto hoy: una sesión de calma o explorar una capa nueva de Glow Space.',
+   go:['calm','◌ Sesión de Calma']},
+  {min:26,max:30,icon:'🌟',t:'¡Excelente! Tu mente brilla',
+   d:'Tus hábitos se notan. Recuerda: constancia > intensidad. Comparte Mind Glow con un compañero que lo necesite — ayudar también suma bienestar.',
+   go:['space','🌌 Visitar Glow Space']}
+];
+let wBound = false, wAns = [];
+
+function wellnessInit(){ if(!wBound){ wBound = true; } }
+function wellnessRender(){
+  const box = $('#quizBox'), res = $('#resultBox');
+  if(!box || !res) return;
+  res.classList.add('hidden'); box.classList.remove('hidden');
+  if(wAns.length >= WELLNESS_Q.length){ wShowResult(); return; }
+  const i = wAns.length, item = WELLNESS_Q[i], pct = Math.round(i/WELLNESS_Q.length*100);
+  box.innerHTML =
+    '<div class="quiz-progress"><i style="width:'+pct+'%"></i></div>'+
+    '<p class="quiz-count">Pregunta '+(i+1)+' de '+WELLNESS_Q.length+'</p>'+
+    '<h3 class="quiz-q">'+item.q+'</h3>'+
+    '<div class="quiz-opts">'+item.opts.map((o,j)=>
+      '<button type="button" class="quiz-opt" data-s="'+j+'"><b>'+o+'</b><small>'+['0','1','2','3'][j]+' pts</small></button>').join('')+'</div>';
+  $$('#quizBox .quiz-opt').forEach(b => b.addEventListener('click', () => {
+    sfx('click'); wAns.push(+b.dataset.s);
+    if(wAns.length >= WELLNESS_Q.length) wShowResult(); else wellnessRender();
+  }));
+}
+function wShowResult(){
+  const score = wAns.reduce((a,b)=>a+b,0);
+  const lvl = W_LEVELS.find(l => score >= l.min && score <= l.max) || W_LEVELS[1];
+  $('#quizBox').classList.add('hidden');
+  const res = $('#resultBox');
+  res.classList.remove('hidden');
+  res.innerHTML =
+    '<div class="result-icon">'+lvl.icon+'</div>'+
+    '<p class="eyebrow">RESULTADO · '+score+' / 30 PUNTOS</p>'+
+    '<h3>'+lvl.t+'</h3><p>'+lvl.d+'</p>'+
+    '<div class="result-actions">'+
+      '<button type="button" class="btn primary" data-view="'+lvl.go[0]+'">'+lvl.go[1]+'</button>'+
+      (lvl.help ? '<button type="button" class="btn ghost" id="gotoHelp">🆘 Recursos de ayuda</button>' : '')+
+      '<button type="button" class="btn ghost" id="redoQuiz">↺ Repetir test</button>'+
+    '</div>';
+  const redo = $('#redoQuiz'); if(redo) redo.addEventListener('click', ()=>{ sfx('click'); wAns=[]; wellnessRender(); });
+  const gh   = $('#gotoHelp'); if(gh)   gh.addEventListener('click', ()=>{ const h=$('#helpCard'); if(h) h.scrollIntoView({behavior:'smooth'}); });
+  const prev = state.wellnessLog[state.wellnessLog.length-1];
+  const isNewDay = !(prev && prev.d === today());
+  state.wellnessLog.push({d:today(), s:score});
+  if(state.wellnessLog.length > 30) state.wellnessLog.shift();
+  save(); drawTrend();
+  if(isNewDay){ xp(30); toast('💚 Test completado'); } else toast('💚 Registro actualizado');
+  wAns = [];
+}
+function drawTrend(){
+  const c = $('#trendCanvas'); if(!c) return;
+  const dpr = devicePixelRatio || 1;
+  const W = c.width = Math.max(280, c.clientWidth) * dpr;
+  const H = c.height = 160 * dpr;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
+  for(let g=0; g<=3; g++){ const y = H*.15 + g*(H*.7/3);
+    ctx.beginPath(); ctx.moveTo(20*dpr,y); ctx.lineTo(W-10*dpr,y); ctx.stroke(); }
+  const log = state.wellnessLog.slice(-10);
+  if(log.length < 2){
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.font = (13*dpr)+'px Inter,sans-serif';
+    ctx.fillText('Haz el test al menos 2 veces para ver tu progreso aqui 📈', 24*dpr, H/2);
+    return;
+  }
+  const px = i => 30*dpr + i*((W-50*dpr)/(log.length-1));
+  const py = v => H*.85 - (v/30)*(H*.7);
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(125,113,255,.35)'); grad.addColorStop(1,'rgba(125,113,255,0)');
+  ctx.beginPath(); ctx.moveTo(px(0),py(log[0].s));
+  log.forEach((p,i)=>ctx.lineTo(px(i),py(p.s)));
+  ctx.lineTo(px(log.length-1),H); ctx.lineTo(px(0),H); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(px(0),py(log[0].s));
+  log.forEach((p,i)=>ctx.lineTo(px(i),py(p.s)));
+  ctx.strokeStyle = '#8b7cff'; ctx.lineWidth = 2.5*dpr; ctx.lineJoin = 'round'; ctx.stroke();
+  log.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(px(i),py(p.s),4*dpr,0,7);
+    ctx.fillStyle = p.s>=20 ? '#51e0c0' : p.s>=13 ? '#ffd166' : '#ff6b8b'; ctx.fill(); });
+}
+
+function init(){
     cv = $('#spaceCanvas'); if(!cv) return;
     ctx = cv.getContext('2d');
     build(); resize(); lastLevel = state.level;
