@@ -493,3 +493,54 @@ h1,h2,h3,.brand-copy strong,.btn,.eyebrow{font-family:'Poppins','Inter',sans-ser
 .help-card ul{margin:0 0 10px;padding-left:20px;line-height:1.9}
 .help-note{font-size:.8rem;opacity:.55;font-style:italic}
 @media (max-width:700px){ .help-card{flex-direction:column} }
+/* ===== SOCIAL + MASCOTA + RIVALES ===== */
+.chip-streak{display:inline-flex;align-items:center;gap:4px;padding:7px 12px;border-radius:99px;
+  background:linear-gradient(135deg,rgba(255,184,77,.18),rgba(255,107,139,.15));
+  border:1px solid rgba(255,184,77,.35);font-family:'Poppins',sans-serif;font-size:.85rem}
+.streak-week{text-align:center;margin-top:16px}
+.week-dots{display:flex;gap:10px;justify-content:center;margin:12px 0}
+.week-dots i{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);transition:all .3s}
+.week-dots i.on{background:linear-gradient(135deg,#ffb84d,#ff6b8a);
+  box-shadow:0 0 14px rgba(255,184,77,.55);border-color:transparent}
+.streak-note{color:var(--muted,#9aa0b5);font-size:.9rem}
+.pet-panel{display:flex;gap:22px;align-items:flex-start;margin-top:16px;
+  border:1px solid rgba(81,224,192,.25)}
+.pet-face{font-size:74px;line-height:1;filter:none;transition:filter .5s;animation:floatY 5s ease-in-out infinite}
+.pet-mood{margin:2px 0 12px;color:var(--text-dim,#c6cadb)}
+.pet-stats label{display:grid;grid-template-columns:86px 1fr 44px;align-items:center;gap:10px;margin-bottom:8px;font-size:.85rem;color:var(--muted,#9aa0b5)}
+.pet-stats i{display:block;height:8px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden}
+.pet-stats b{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#51e0c0,#8b7cff);transition:width .5s ease}
+.room-wrap{max-width:720px;margin-top:8px;display:flex;flex-direction:column;gap:12px}
+.room-head{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08)}
+.room-head small{margin-left:auto;opacity:.6}
+.room-dot{width:9px;height:9px;border-radius:50%;background:#51e0c0;box-shadow:0 0 10px #51e0c0;animation:pulseDot 2s infinite}
+@keyframes pulseDot{50%{opacity:.4}}
+.room-messages{height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:6px 4px}
+.room-msg{max-width:78%;background:rgba(139,124,255,.13);border:1px solid rgba(139,124,255,.25);
+  border-radius:16px 16px 16px 4px;padding:10px 14px;word-break:break-word;line-height:1.45;align-self:flex-start}
+.room-msg small{opacity:.5;font-size:.68rem}
+.room-msg.me{background:rgba(81,224,192,.13);border-color:rgba(81,224,192,.28);border-radius:16px 16px 4px 16px;align-self:flex-end}
+.room-msg.sys{background:rgba(255,209,102,.1);border-color:rgba(255,209,102,.3);align-self:center;text-align:center;font-size:.85rem}
+.room-bigsticker{font-size:52px;line-height:1.1;display:inline-block;animation:viewIn .3s ease both}
+.room-stickers{display:flex;flex-wrap:wrap;gap:8px}
+.room-sticker{font-size:24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:6px 10px;cursor:pointer;transition:transform .15s,border-color .15s}
+.room-sticker:hover{transform:scale(1.25) rotate(-6deg);border-color:#8b7cff}
+.room-form{display:flex;gap:10px}
+.bubble.ai-art{padding:10px;max-width:340px}
+.art-cv{width:100%;border-radius:12px;display:block;border:1px solid rgba(255,255,255,.1)}
+.art-cap{font-size:.72rem;opacity:.65;padding:8px 4px 2px}
+#miniPlayer{position:fixed;left:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:8px;
+  padding:8px 14px 8px 8px;border-radius:99px;background:rgba(16,20,38,.92);
+  border:1px solid rgba(139,124,255,.35);backdrop-filter:blur(12px);
+  box-shadow:0 10px 30px rgba(0,0,0,.45)}
+#miniPlayer button{width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#8b7cff,#51e0c0);color:#fff;font-size:.85rem}
+#mpTitle{font-size:.78rem;color:#e8eaf2;cursor:pointer;max-width:180px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;font-weight:600}
+@media (max-width:800px){ #miniPlayer{left:12px;bottom:12px} #mpTitle{max-width:110px} }
+.team-avatar.has-img{padding:0;overflow:hidden}
+.team-avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+button.team-avatar{cursor:pointer;transition:transform .2s,box-shadow .2s;border:none}
+button.team-avatar:hover{transform:scale(1.07);box-shadow:0 0 18px rgba(139,124,255,.5)}

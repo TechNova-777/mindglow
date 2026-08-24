@@ -25,6 +25,8 @@ const defaultState = {
   tasks:[], journal:[], sound:true, reduced:false,
   streak:0, highScores:{}, lastDate:null, aiMemory:[],
   user:null,
+  pet:{name:'Capi el Capibara', fed:70, energy:70, joy:70, last:null},
+  teamImgs:{},
   wellnessLog:[],
   team:[{name:'JACK'},{name:'CAMILA'},{name:'CLARA'},{name:'ANDREA'},{name:'EDISON'}],
   feedback:[]
@@ -41,6 +43,9 @@ function loadState(){
     s.journal    = Array.isArray(s.journal) ? s.journal : [];
     s.feedback   = Array.isArray(s.feedback) ? s.feedback : [];
     s.wellnessLog= Array.isArray(s.wellnessLog) ? s.wellnessLog : [];
+    s.teamImgs   = (s.teamImgs && typeof s.teamImgs==='object') ? s.teamImgs : {};
+    if(!s.pet || typeof s.pet!=='object')
+      s.pet = {name:'Capi el Capibara', fed:70, energy:70, joy:70, last:null};
     s.team       = Array.isArray(s.team) ? s.team : [];
     if(!s.team.length || s.team.some(m => m.role) ||
        (s.team.length===1 && s.team[0].name==='Jack'))
@@ -105,8 +110,8 @@ function ensureStreak(){
 /* ---------- Navegación ---------- */
 const NAV = [['home','⌂','Inicio'],['ai','✦','Glow AI'],['calm','◌','Calma'],
   ['wellness','💚','Bienestar+'],['arcade','⌁','Arcade'],['focus','◷','Focus'],
-  ['tasks','✓','Tareas'],['journal','▱','Diario'],['school','🏫','Mi colegio'],
-  ['space','✧','Glow Space'],['profile','○','Perfil']];
+  ['tasks','✓','Tareas'],['journal','▱','Diario'],['chat','💬','Sala Glow'],
+  ['school','🏫','Mi colegio'],['space','✧','Glow Space'],['profile','○','Perfil']];
 
 function buildNav(){
   $('#navList').innerHTML = NAV.map(n =>
@@ -123,6 +128,8 @@ function showView(v){
   if(v === 'journal') renderJournal();
   if(v === 'school')  renderTeam();
   if(v === 'wellness'){ wellnessInit(); wellnessRender(); }
+  if(v === 'chat')    chatInit();
+  if(v === 'space'){ Space.sync(); renderPet(); }
   if(v === 'profile'){ renderTeam(); authInit(); }
   if(innerWidth < 800) $('#sidebar').classList.remove('open');
 }
@@ -144,6 +151,8 @@ function updateUI(){
   $('#statGames').textContent = state.games;
   $('#statTasks').textContent = state.tasks.filter(t=>t.done).length;
   $('#dailyStreak').textContent = 'Racha ' + state.streak + ' días';
+  const scNum = $('#streakNum'); if(scNum) scNum.textContent = state.streak;
+  renderWeekDots();
   $('#globalGames').textContent = state.games;
   const highs = Object.values(state.highScores||{});
   $('#globalHigh').textContent = highs.length ? Math.max.apply(null,highs) : 0;
@@ -279,7 +288,7 @@ function aiInit(){
     }
     box.appendChild(d); box.scrollTop = box.scrollHeight;
   }
-  add('Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0. Te ayudo a bajar el estrés, organizarte, concentrarte o elegir un juego. ¿Qué necesitas?','ai');
+  add('Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal.\nAhora puedo: resolver cálculos 🧮, decirte hora/fecha, lanzar moneda o dado 🎲, dibujar arte único ("dibujame un dragón") 🎨 y armarte un plan según tu progreso ("necesito una guia").\n¿Por dónde empezamos?','ai');
 
   /* --- Preguntas de conversación: respuestas divertidas --- */
   const pick = a => a[Math.floor(Math.random()*a.length)];
@@ -338,6 +347,41 @@ function aiInit(){
       ? FUNNY.find(f => f[0].test(s)) : null;
     if(funHit){
       intent='fun'; reply=pick(funHit[1]);
+    } else if(/dibuj|hazme una imagen|imagen de|arte de/.test(s)){
+      intent='art';
+      const tema = text.replace(/dibuja(me)?|dibujar|hazme una imagen de|hazme.*imagen|imagen de|arte de/gi,'').trim() || 'tu idea';
+      reply='🎨 Modo Glow Art activado. Generé esta pieza ÚNICA e irrepetible inspirada en "'+tema+'". Cada prompt crea un arte diferente — pídeme otro.';
+      actions=[['✦ Hablar más con la IA','ai']];
+      setTimeout(() => aiArtBubble(tema), 150);
+    } else if(/guia|no se que hacer|plan para hoy|plan de estudio|ayudame a organizar|que hago ahora/.test(s)){
+      intent='guide'; reply=wPlan();
+      actions=[['✓ Ver tareas','tasks'],['◷ Ir a Focus','focus'],['💚 Hacer el test','wellness']];
+    } else if(/calc|cuanto es|cuanto vale|[0-9]\s*[\+\-\*x×\/÷]\s*[0-9]/.test(s)){
+      intent='math';
+      let ex = s.replace(/^.*(calcular?|calc|cuanto es|cuanto vale)[:\s]*/,'')
+                .replace(/[^0-9+\-*\/().,%x×÷ ]/g,'')
+                .replace(/x|×/g,'*').replace(/÷/g,'/').replace(/,/g,'.').trim();
+      try{
+        if(!ex) throw 0;
+        const v = Function('"use strict";return('+ex+')')();
+        reply = Number.isFinite(v)
+          ? '🧮 '+ex+' = '+(Math.round(v*10000)/10000)+'\nManejo +, −, ×, ÷ y paréntesis. ¿Otro cálculo?'
+          : 'Esa expresión no me cuadró 🤔';
+      }catch(err){ reply='No pude leer el cálculo 🤔 Prueba: "cuanto es 15*8+4" o "calcula (120+80)/2"'; }
+    } else if(/que hora|hora es/.test(s)){
+      intent='time';
+      reply='🕒 Son las '+new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})+'.';
+    } else if(/que fecha|fecha de hoy|dia es hoy|dia es mañana/.test(s)){
+      intent='date';
+      reply='📅 Hoy es '+new Date().toLocaleDateString('es-PE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'.';
+    } else if(/lanza.*moneda|lanza una moneda|moneda al aire/.test(s)){
+      intent='coin'; reply='🪙 Lanzo la moneda… ¡'+pick(['CARA','SELLO'])+'!';
+    } else if(/tira.*dado|lanza.*dado|un dado/.test(s)){
+      intent='dice'; reply='🎲 El dado muestra: '+(1+Math.floor(Math.random()*6));
+    } else if(/^elige entre .+ o .+$/.test(s)){
+      const m = s.match(/^elige entre (.+) o (.+)$/);
+      intent='choose';
+      reply=pick([m[1],m[2]]).replace(/[¿?]/g,'').trim()+' — decisión tomada por mis circuitos ⚡';
     } else if(/panic|ansiedad extrem|muriendo de|no puedo respirar/.test(s)){
       intent='panic';
       reply='Respira conmigo (técnica 5-4-3-2-1):\n• Nombra 5 cosas que VES\n• 4 que puedes TOCAR\n• 3 que escuchas\n• 2 que hueles\n• 1 que saboreas\nEstás a salvo. Esto pasa y va a pasar.';
@@ -565,6 +609,7 @@ function wakeChime(){
   N.forEach((f,i) => setTimeout(() => pluck(f, .12, 1.4, 'sine'), i*280));
   setTimeout(() => pluck(1318.5, .06, 2.2, 'triangle'), 1750);
   setTimeout(() => pluck(523.25/2, .05, 2.6, 'sine'),    1900);
+  petBump('energy',12); renderPet();
 }
 function musicTick(){
   const t = TRACKS[musicIndex];
@@ -583,12 +628,14 @@ function musicTick(){
 function musicStop(){
   if(musicTimer){ clearInterval(musicTimer); musicTimer=null; }
   musicOn=false; $('#musicPlay').textContent='▶';
+  const mp=$('#mpPlay'); if(mp) mp.textContent='▶';
 }
 function musicStart(){
   if(!state.sound){ toast('🔇 Activa los sonidos primero'); return; }
   if(!ensureCtx()) return;
   musicStop();
   musicOn=true; $('#musicPlay').textContent='⏸'; musicT0=performance.now();
+  const mp=$('#mpPlay'); if(mp) mp.textContent='⏸';
   musicTimer=setInterval(musicTick, 60000/TRACKS[musicIndex].bpm/2);
   musicTick();
 }
@@ -596,6 +643,7 @@ function updMusicMeta(){
   const t = TRACKS[musicIndex];
   $('#musicTitle').textContent = t.title;
   $('#musicSubtitle').textContent = 'MindGlow Original · síntesis en vivo';
+  const mt = $('#mpTitle'); if(mt) mt.textContent = '♪ ' + t.title;
 }
 function musicInit(){
   $('#musicPlay').addEventListener('click', () => musicOn ? musicStop() : musicStart());
@@ -768,12 +816,22 @@ function schoolInit(){
 function renderTeam(){
   const grid = $('#teamGrid'); if(!grid) return;
   grid.innerHTML = state.team.map((m,i) =>
-    '<div class="team-card"><div class="team-avatar">'+esc((m.name[0]||'?').toUpperCase())+'</div>'+
+    '<div class="team-card">'+
+    '<button type="button" class="team-avatar'+(m.img?' has-img':'')+'" data-team-img="'+i+'" title="Cambiar foto">'+
+      (m.img ? '<img src="'+m.img+'" alt="'+esc(m.name)+'">' : esc((m.name[0]||'?').toUpperCase()))+
+    '</button>'+
     '<div><b>'+esc(m.name)+'</b></div>'+
     '<button type="button" class="team-del" data-team-del="'+i+'">×</button></div>').join('');
   grid.querySelectorAll('[data-team-del]').forEach(b => b.addEventListener('click', () => {
     state.team.splice(parseInt(b.dataset.teamDel,10), 1);
     renderTeam(); save();
+  }));
+  grid.querySelectorAll('[data-team-img]').forEach(b => b.addEventListener('click', () => {
+    pickImage(dataURL => {
+      state.team[parseInt(b.dataset.teamImg,10)].img = dataURL;
+      renderTeam(); save(); sfx('good');
+      toast('📸 ¡Foto actualizada!');
+    });
   }));
 }
 
@@ -1053,112 +1111,7 @@ const Space = (function(){
     }
     if(state.reduced) draw(16);
   }
-/* ---------- Bienestar+ : test, tendencia y biblioteca ---------- */
-const WELLNESS_Q = [
-  {q:'¿Cómo has dormido esta semana?', opts:['Muy mal','Regular','Bien','Muy bien']},
-  {q:'¿Con qué frecuencia te sientes concentrado en clase?', opts:['Casi nunca','A veces','Seguido','Siempre']},
-  {q:'¿Sientes que puedes hablar de tus problemas con alguien?', opts:['No','Tal vez','La mayoría de veces','Siempre']},
-  {q:'¿Cómo manejas la presión de exámenes y tareas?', opts:['Me abruma','Con dificultad','Bien','Muy bien']},
-  {q:'¿Te dedicas tiempo a actividades que disfrutas?', opts:['Nunca','Rara vez','Varias veces/semana','Todos los días']},
-  {q:'¿Cómo está tu energía durante el día?', opts:['Agotada','Baja','Normal','Excelente']},
-  {q:'¿Usas el celular hasta quedarte dormido?', opts:['Siempre','Seguido','A veces','Nunca']},
-  {q:'¿Comes bien y tomas agua durante el día?', opts:['No','Muy poco','Regular','Sí, me cuido']},
-  {q:'¿Te sientes motivado con tus metas?', opts:['Nada','Poco','Algo','Muchísimo']},
-  {q:'¿Practicas respiración o pausas conscientes?', opts:['Nunca','Rara vez','A veces','Frecuentemente']}
-];
-const W_LEVELS = [
-  {min:0,max:12,icon:'💜',t:'Necesitas apoyo ahora mismo',
-   d:'Tu carga parece pesada, y no tienes que cargarla solo. Empieza con una respiración guiada de 1 minuto y habla con alguien de confianza: familia, orientador del colegio o Glow AI.',
-   go:['calm','🌿 Respirar 1 minuto'], help:true},
-  {min:13,max:19,icon:'🌤️',t:'Vas cargando más de lo que crees',
-   d:'Tu bienestar está a medias. Una rutina corta de Focus y dormir mejor cambiarían tu semana. Cuéntale a Glow AI cómo te sientes y arma un plan pequeño.',
-   go:['focus','🎯 Empezar Focus 25 min']},
-  {min:20,max:25,icon:'🌱',t:'¡Vas bien, con margen para crecer!',
-   d:'Buen nivel de bienestar. Mantén tus hábitos y súmale un reto hoy: una sesión de calma o explorar una capa nueva de Glow Space.',
-   go:['calm','◌ Sesión de Calma']},
-  {min:26,max:30,icon:'🌟',t:'¡Excelente! Tu mente brilla',
-   d:'Tus hábitos se notan. Recuerda: constancia > intensidad. Comparte Mind Glow con un compañero que lo necesite — ayudar también suma bienestar.',
-   go:['space','🌌 Visitar Glow Space']}
-];
-let wBound = false, wAns = [];
-
-function wellnessInit(){ if(!wBound){ wBound = true; } }
-function wellnessRender(){
-  const box = $('#quizBox'), res = $('#resultBox');
-  if(!box || !res) return;
-  res.classList.add('hidden'); box.classList.remove('hidden');
-  if(wAns.length >= WELLNESS_Q.length){ wShowResult(); return; }
-  const i = wAns.length, item = WELLNESS_Q[i], pct = Math.round(i/WELLNESS_Q.length*100);
-  box.innerHTML =
-    '<div class="quiz-progress"><i style="width:'+pct+'%"></i></div>'+
-    '<p class="quiz-count">Pregunta '+(i+1)+' de '+WELLNESS_Q.length+'</p>'+
-    '<h3 class="quiz-q">'+item.q+'</h3>'+
-    '<div class="quiz-opts">'+item.opts.map((o,j)=>
-      '<button type="button" class="quiz-opt" data-s="'+j+'"><b>'+o+'</b><small>'+['0','1','2','3'][j]+' pts</small></button>').join('')+'</div>';
-  $$('#quizBox .quiz-opt').forEach(b => b.addEventListener('click', () => {
-    sfx('click'); wAns.push(+b.dataset.s);
-    if(wAns.length >= WELLNESS_Q.length) wShowResult(); else wellnessRender();
-  }));
-}
-function wShowResult(){
-  const score = wAns.reduce((a,b)=>a+b,0);
-  const lvl = W_LEVELS.find(l => score >= l.min && score <= l.max) || W_LEVELS[1];
-  $('#quizBox').classList.add('hidden');
-  const res = $('#resultBox');
-  res.classList.remove('hidden');
-  res.innerHTML =
-    '<div class="result-icon">'+lvl.icon+'</div>'+
-    '<p class="eyebrow">RESULTADO · '+score+' / 30 PUNTOS</p>'+
-    '<h3>'+lvl.t+'</h3><p>'+lvl.d+'</p>'+
-    '<div class="result-actions">'+
-      '<button type="button" class="btn primary" data-view="'+lvl.go[0]+'">'+lvl.go[1]+'</button>'+
-      (lvl.help ? '<button type="button" class="btn ghost" id="gotoHelp">🆘 Recursos de ayuda</button>' : '')+
-      '<button type="button" class="btn ghost" id="redoQuiz">↺ Repetir test</button>'+
-    '</div>';
-  const redo = $('#redoQuiz'); if(redo) redo.addEventListener('click', ()=>{ sfx('click'); wAns=[]; wellnessRender(); });
-  const gh   = $('#gotoHelp'); if(gh)   gh.addEventListener('click', ()=>{ const h=$('#helpCard'); if(h) h.scrollIntoView({behavior:'smooth'}); });
-  const prev = state.wellnessLog[state.wellnessLog.length-1];
-  const isNewDay = !(prev && prev.d === today());
-  state.wellnessLog.push({d:today(), s:score});
-  if(state.wellnessLog.length > 30) state.wellnessLog.shift();
-  save(); drawTrend();
-  if(isNewDay){ xp(30); toast('💚 Test completado'); } else toast('💚 Registro actualizado');
-  wAns = [];
-}
-function drawTrend(){
-  const c = $('#trendCanvas'); if(!c) return;
-  const dpr = devicePixelRatio || 1;
-  const W = c.width = Math.max(280, c.clientWidth) * dpr;
-  const H = c.height = 160 * dpr;
-  const ctx = c.getContext('2d');
-  ctx.clearRect(0,0,W,H);
-  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
-  for(let g=0; g<=3; g++){ const y = H*.15 + g*(H*.7/3);
-    ctx.beginPath(); ctx.moveTo(20*dpr,y); ctx.lineTo(W-10*dpr,y); ctx.stroke(); }
-  const log = state.wellnessLog.slice(-10);
-  if(log.length < 2){
-    ctx.fillStyle = 'rgba(255,255,255,.45)';
-    ctx.font = (13*dpr)+'px Inter,sans-serif';
-    ctx.fillText('Haz el test al menos 2 veces para ver tu progreso aqui 📈', 24*dpr, H/2);
-    return;
-  }
-  const px = i => 30*dpr + i*((W-50*dpr)/(log.length-1));
-  const py = v => H*.85 - (v/30)*(H*.7);
-  const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'rgba(125,113,255,.35)'); grad.addColorStop(1,'rgba(125,113,255,0)');
-  ctx.beginPath(); ctx.moveTo(px(0),py(log[0].s));
-  log.forEach((p,i)=>ctx.lineTo(px(i),py(p.s)));
-  ctx.lineTo(px(log.length-1),H); ctx.lineTo(px(0),H); ctx.closePath();
-  ctx.fillStyle = grad; ctx.fill();
-  ctx.beginPath(); ctx.moveTo(px(0),py(log[0].s));
-  log.forEach((p,i)=>ctx.lineTo(px(i),py(p.s)));
-  ctx.strokeStyle = '#8b7cff'; ctx.lineWidth = 2.5*dpr; ctx.lineJoin = 'round'; ctx.stroke();
-  log.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(px(i),py(p.s),4*dpr,0,7);
-    ctx.fillStyle = p.s>=20 ? '#51e0c0' : p.s>=13 ? '#ffd166' : '#ff6b8b'; ctx.fill(); });
-}
-
-function init(){
-    cv = $('#spaceCanvas'); if(!cv) return;
+  function init(){$('#spaceCanvas'); if(!cv) return;
     ctx = cv.getContext('2d');
     build(); resize(); lastLevel = state.level;
     cv.addEventListener('pointermove', e => {
@@ -1276,6 +1229,7 @@ function finishGame(score, xpAward, msg){
   state.games++;
   state.highScores[game.name] = Math.max(state.highScores[game.name]||0, score);
   xp(xpAward); sfx('win');
+  petBump('joy',8); renderPet();
   $('#gameBody').innerHTML =
     '<div class="board-center"><div style="text-align:center">'+
     '<div style="font-size:50px">✨</div><h3>'+esc(game.name)+'</h3>'+
@@ -1504,11 +1458,11 @@ function gFoodCatch(){
   const spawnMs   = { easy:950, normal:750, hard:560 }[difficulty];
   const GOOD = ['🍎','🍌','🍇','🍓','🍊'];
   const body = shell('<div class="game-board"><canvas id="fcCv"></canvas></div>'+
-    '<p class="game-message">Mueve la cesta con el mouse, el dedo (o ← →). Atrapa comida 🍎 hasta 300 pts · si tocas una lata 🥫 pierdes automáticamente.</p>');
+    '<p class="game-message">Mueve la cesta con el mouse, el dedo (o ← →). Atrapa comida 🍎 hasta 300 pts · si tocas una lata 🥫 pierdes. <b>🤖 Rival CPU compite contra ti: ¡llega a 300 antes que él!</b></p>');
   const cvs = body.querySelector('#fcCv');
   let env = fitCanvas(cvs), ctx = env.ctx, W = env.w, H = env.h;
   let items=[], basket={ x:W/2, w:86 }, score=0, live=true,
-      rafId=null, last=performance.now(), spawnT=0;
+      rafId=null, last=performance.now(), spawnT=0, rScore=0;
   function resizeC(){
     env = fitCanvas(cvs); ctx = env.ctx; W = env.w; H = env.h;
     basket.x = Math.min(Math.max(basket.x, 40), W-40);
@@ -1536,6 +1490,12 @@ function gFoodCatch(){
     if(!game.paused){
       spawnT += dt*1000;
       if(spawnT > spawnMs){ spawnT=0; spawn(); }
+      rScore += dt*10*rivalRate();
+      if(live && rScore >= 300 && score < 300){
+        live=false; cancelAnimationFrame(rafId); sfx('bad');
+        offerRetry('🤖 ¡El Rival CPU llegó a 300 primero! Ibas por '+score+' pts. ¡Revancha!');
+        return;
+      }
       items.forEach(it => it.y += it.v*dt);
       for(let i=items.length-1;i>=0;i--){
         const it = items[i], by = H-34;
@@ -1561,6 +1521,14 @@ function gFoodCatch(){
     ctx.fillText('🧺', basket.x, H-24);
     ctx.strokeStyle='rgba(255,255,255,.12)';
     ctx.beginPath(); ctx.moveTo(0,H-8); ctx.lineTo(W,H-8); ctx.stroke();
+    const rp = Math.min(100, rScore/3);
+    ctx.fillStyle='rgba(255,255,255,.09)'; ctx.fillRect(W*.3,10,W*.4,8);
+    ctx.fillStyle='#ffb84d'; ctx.fillRect(W*.3,10,W*.4*rp/100,8);
+    ctx.font='15px serif'; ctx.textAlign='right';
+    ctx.fillText('🤖', W*.3-6, 20);
+    ctx.font='11px sans-serif'; ctx.textAlign='left';
+    ctx.fillStyle='rgba(255,184,77,.9)';
+    ctx.fillText(Math.round(rScore)+' pts', W*.7+8, 19);
     rafId = requestAnimationFrame(loop);
   }
   const mv = e => {
@@ -1627,11 +1595,11 @@ function gSecretRun(){
   const mult = { easy:.82, normal:1, hard:1.22 }[difficulty];
   const body = shell('<div class="game-board"><canvas id="srCv"></canvas></div>'+
     '<p class="game-message">Guía al personaje con el mouse o el dedo (o ↑ ↓). Esquiva los obstáculos '+
-    'y llega a la meta 🏁: <b>+10 XP</b> ¡y saltará de felicidad!</p>');
+    'y llega a la meta 🏁 antes que el <b>🤖 Rival CPU</b>: <b>+10 XP</b> ¡y saltará de felicidad!</p>');
   const cvs = body.querySelector('#srCv');
   let env = fitCanvas(cvs), ctx = env.ctx, W = env.w, H = env.h;
   const GOAL = 5200, CHX = 90;
-  let dist=0, obs=[], dots=[], parts=[], charY=H/2, ty=H/2,
+  let dist=0, rDist=0, obs=[], dots=[], parts=[], charY=H/2, ty=H/2,
       over=false, finished=false, jumpT=-1,
       rafId=null, last=performance.now(), spawnAt=320, dust=0;
   for(let i=0;i<40;i++) dots.push({ x:Math.random(), y:Math.random(), z:.3+Math.random()*.7 });
@@ -1671,6 +1639,12 @@ function gSecretRun(){
     if(!game.paused){
       charY += (ty-charY)*Math.min(1, dt*10);
       dist  += speed()*dt;
+      rDist += 288*rivalRate()*dt;
+      if(!finished && !over && rDist >= GOAL){
+        over=true; cancelAnimationFrame(rafId); sfx('bad');
+        offerRetry('🤖 El Rival CPU cruzó la meta primero ('+Math.round(rDist/GOAL*100)+'% vs tu '+Math.round(dist/GOAL*100)+'%). ¡Otra vez!');
+        return;
+      }
       if(dist >= spawnAt){ spawnAt += 240+Math.random()*160; spawnObs(); }
       const vx = speed()*dt;
       obs.forEach(o => o.x -= vx);
@@ -1709,6 +1683,10 @@ function gSecretRun(){
       ctx.font='26px serif'; ctx.textAlign='center';
       ctx.fillText('🏁', fx, H-54);
     }
+    const rpct = Math.min(100, rDist/GOAL*100), rx = 14 + (rpct/100)*(W-28);
+    ctx.fillStyle='rgba(255,255,255,.1)'; ctx.fillRect(14,H-70,W-28,5);
+    ctx.fillStyle='#ffb84d'; ctx.fillRect(14,H-70,(W-28)*rpct/100,5);
+    ctx.font='15px serif'; ctx.fillText('🤖', Math.min(rx,W-16), H-58);
     ctx.save();
     ctx.shadowColor='#ff6b8a'; ctx.shadowBlur=14; ctx.fillStyle='#ff6b8a';
     obs.forEach(o => { rr(ctx,o.x,o.y,o.w,o.h,8); ctx.fill(); });
@@ -1830,6 +1808,328 @@ function donateInit(){
   $('#copyYape').addEventListener('click', () => copy(DONATE_YAPE,'📲 Yape copiado: '+DONATE_YAPE));
 }
 
+/* ---------- Bienestar+ : test, tendencia y biblioteca ---------- */
+const WELLNESS_Q = [
+  {q:'¿Cómo has dormido esta semana?', opts:['Muy mal','Regular','Bien','Muy bien']},
+  {q:'¿Con qué frecuencia te sientes concentrado en clase?', opts:['Casi nunca','A veces','Seguido','Siempre']},
+  {q:'¿Sientes que puedes hablar de tus problemas con alguien?', opts:['No','Tal vez','La mayoría de veces','Siempre']},
+  {q:'¿Cómo manejas la presión de exámenes y tareas?', opts:['Me abruma','Con dificultad','Bien','Muy bien']},
+  {q:'¿Te dedicas tiempo a actividades que disfrutas?', opts:['Nunca','Rara vez','Varias veces/semana','Todos los días']},
+  {q:'¿Cómo está tu energía durante el día?', opts:['Agotada','Baja','Normal','Excelente']},
+  {q:'¿Usas el celular hasta quedarte dormido?', opts:['Siempre','Seguido','A veces','Nunca']},
+  {q:'¿Comes bien y tomas agua durante el día?', opts:['No','Muy poco','Regular','Sí, me cuido']},
+  {q:'¿Te sientes motivado con tus metas?', opts:['Nada','Poco','Algo','Muchísimo']},
+  {q:'¿Practicas respiración o pausas conscientes?', opts:['Nunca','Rara vez','A veces','Frecuentemente']}
+];
+const W_LEVELS = [
+  {min:0,max:12,icon:'💜',t:'Necesitas apoyo ahora mismo',
+   d:'Tu carga parece pesada, y no tienes que cargarla solo. Empieza con una respiración guiada de 1 minuto y habla con alguien de confianza: familia, orientador del colegio o Glow AI.',
+   go:['calm','🌿 Respirar 1 minuto'], help:true},
+  {min:13,max:19,icon:'🌤️',t:'Vas cargando más de lo que crees',
+   d:'Tu bienestar está a medias. Una rutina corta de Focus y dormir mejor cambiarían tu semana. Cuéntale a Glow AI cómo te sientes y arma un plan pequeño.',
+   go:['focus','🎯 Empezar Focus 25 min']},
+  {min:20,max:25,icon:'🌱',t:'¡Vas bien, con margen para crecer!',
+   d:'Buen nivel de bienestar. Mantén tus hábitos y súmale un reto hoy: una sesión de calma o explorar una capa nueva de Glow Space.',
+   go:['calm','◌ Sesión de Calma']},
+  {min:26,max:30,icon:'🌟',t:'¡Excelente! Tu mente brilla',
+   d:'Tus hábitos se notan. Recuerda: constancia > intensidad. Comparte Mind Glow con un compañero que lo necesite — ayudar también suma bienestar.',
+   go:['space','🌌 Visitar Glow Space']}
+];
+let wBound = false, wAns = [];
+
+function wellnessInit(){ if(!wBound){ wBound = true; } }
+function wellnessRender(){
+  const box = $('#quizBox'), res = $('#resultBox');
+  if(!box || !res) return;
+  res.classList.add('hidden'); box.classList.remove('hidden');
+  if(wAns.length >= WELLNESS_Q.length){ wShowResult(); return; }
+  const i = wAns.length, item = WELLNESS_Q[i], pct = Math.round(i/WELLNESS_Q.length*100);
+  box.innerHTML =
+    '<div class="quiz-progress"><i style="width:'+pct+'%"></i></div>'+
+    '<p class="quiz-count">Pregunta '+(i+1)+' de '+WELLNESS_Q.length+'</p>'+
+    '<h3 class="quiz-q">'+item.q+'</h3>'+
+    '<div class="quiz-opts">'+item.opts.map((o,j)=>
+      '<button type="button" class="quiz-opt" data-s="'+j+'"><b>'+o+'</b><small>'+['0','1','2','3'][j]+' pts</small></button>').join('')+'</div>';
+  $$('#quizBox .quiz-opt').forEach(b => b.addEventListener('click', () => {
+    sfx('click'); wAns.push(+b.dataset.s);
+    if(wAns.length >= WELLNESS_Q.length) wShowResult(); else wellnessRender();
+  }));
+}
+function wShowResult(){
+  const score = wAns.reduce((a,b)=>a+b,0);
+  const lvl = W_LEVELS.find(l => score >= l.min && score <= l.max) || W_LEVELS[1];
+  $('#quizBox').classList.add('hidden');
+  const res = $('#resultBox');
+  res.classList.remove('hidden');
+  res.innerHTML =
+    '<div class="result-icon">'+lvl.icon+'</div>'+
+    '<p class="eyebrow">RESULTADO · '+score+' / 30 PUNTOS</p>'+
+    '<h3>'+lvl.t+'</h3><p>'+lvl.d+'</p>'+
+    '<div class="result-actions">'+
+      '<button type="button" class="btn primary" data-view="'+lvl.go[0]+'">'+lvl.go[1]+'</button>'+
+      (lvl.help ? '<button type="button" class="btn ghost" id="gotoHelp">🆘 Recursos de ayuda</button>' : '')+
+      '<button type="button" class="btn ghost" id="redoQuiz">↺ Repetir test</button>'+
+    '</div>';
+  const redo = $('#redoQuiz'); if(redo) redo.addEventListener('click', ()=>{ sfx('click'); wAns=[]; wellnessRender(); });
+  const gh   = $('#gotoHelp'); if(gh)   gh.addEventListener('click', ()=>{ const h=$('#helpCard'); if(h) h.scrollIntoView({behavior:'smooth'}); });
+  const prev = state.wellnessLog[state.wellnessLog.length-1];
+  const isNewDay = !(prev && prev.d === today());
+  state.wellnessLog.push({d:today(), s:score});
+  if(state.wellnessLog.length > 30) state.wellnessLog.shift();
+  save(); drawTrend();
+  if(isNewDay){ xp(30); toast('💚 Test completado'); } else toast('💚 Registro actualizado');
+  wAns = [];
+}
+function drawTrend(){
+  const c = $('#trendCanvas'); if(!c) return;
+  const dpr = devicePixelRatio || 1;
+  const W = c.width = Math.max(280, c.clientWidth) * dpr;
+  const H = c.height = 160 * dpr;
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
+  for(let g=0; g<=3; g++){ const y = H*.15 + g*(H*.7/3);
+    ctx.beginPath(); ctx.moveTo(20*dpr,y); ctx.lineTo(W-10*dpr,y); ctx.stroke(); }
+  const log = state.wellnessLog.slice(-10);
+  if(log.length < 2){
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.font = (13*dpr)+'px Inter,sans-serif';
+    ctx.fillText('Haz el test al menos 2 veces para ver tu progreso aqui 📈', 24*dpr, H/2);
+    return;
+  }
+  const px = i => 30*dpr + i*((W-50*dpr)/(log.length-1));
+  const py = v => H*.85 - (v/30)*(H*.7);
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'rgba(125,113,255,.35)'); grad.addColorStop(1,'rgba(125,113,255,0)');
+  ctx.beginPath(); ctx.moveTo(px(0),py(log[0].s));
+  log.forEach((p,i)=>ctx.lineTo(px(i),py(p.s)));
+  ctx.lineTo(px(log.length-1),H); ctx.lineTo(px(0),H); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(px(0),py(log[0].s));
+  log.forEach((p,i)=>ctx.lineTo(px(i),py(p.s)));
+  ctx.strokeStyle = '#8b7cff'; ctx.lineWidth = 2.5*dpr; ctx.lineJoin = 'round'; ctx.stroke();
+  log.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(px(i),py(p.s),4*dpr,0,7);
+    ctx.fillStyle = p.s>=20 ? '#51e0c0' : p.s>=13 ? '#ffd166' : '#ff6b8b'; ctx.fill(); });
+}
+
+/* ---------- Racha semanal visible ---------- */
+function renderWeekDots(){
+  const el = $('#weekDots'); if(!el) return;
+  const n = Math.min(7, Math.max(state.streak||0, 0));
+  let html = '';
+  for(let i=0;i<7;i++) html += '<i class="'+(i >= 7-n ? 'on' : '')+'"></i>';
+  el.innerHTML = html;
+  const note = $('#streakNote');
+  if(note) note.textContent =
+    n>=7 ? '🔥 ¡SEMANA COMPLETA! Eres imparable.' :
+    n>=3 ? 'Vas ' + n + ' días seguidos 🔥 La constancia ya es tuya.' :
+    n>=1 ? 'Día ' + n + ' de tu racha. Vuelve mañana por el día ' + (n+1) + '.' :
+           'Entra cada día para mantener tu fuego 🔥 encendido.';
+}
+
+/* ---------- Mascota virtual: Capi ---------- */
+function petDecay(){
+  const p = state.pet, d = today();
+  if(p.last === d) return;
+  const days = p.last ? Math.max(1, Math.round((new Date(d)-new Date(p.last))/86400000)) : 0;
+  ['fed','energy','joy'].forEach(k => { p[k] = Math.max(5, p[k]-14*days); });
+  p.last = d; save();
+}
+function petBump(k,n){ const p = state.pet; p[k] = Math.min(100, p[k]+n); save(); }
+function renderPet(){
+  const p = state.pet, avg = (p.fed+p.energy+p.joy)/3;
+  const face = $('#petFace'); if(!face) return;
+  face.style.filter = avg>=75 ? 'drop-shadow(0 0 20px rgba(81,224,192,.75))'
+                    : avg>=50 ? 'none' : 'grayscale(.85)';
+  const mood = $('#petMood');
+  if(mood) mood.textContent =
+    avg>=85 ? '¡Está radiante! Le encanta verte.' :
+    avg>=60 ? 'Está tranquilo y feliz.' :
+    avg>=35 ? 'Se le nota apagado…dale cariño.' :
+              '¡Necesita cuidados YA!';
+  [['Fed','fed'],['Energy','energy'],['Joy','joy']].forEach(pair => {
+    const bar = $('#pet'+pair[0]+'Bar'), val = $('#pet'+pair[0]+'Val');
+    if(bar){
+      bar.style.width = p[pair[1]]+'%';
+      val.textContent = Math.round(p[pair[1]])+'%';
+      bar.style.background = p[pair[1]]>=55 ? 'linear-gradient(90deg,#51e0c0,#8b7cff)'
+                           : p[pair[1]]>=30 ? '#ffd166' : '#ff6b8b';
+    }
+  });
+}
+function petInit(){
+  const f = $('#petFeed'), h = $('#petPet');
+  if(!f || f.dataset.b) return;
+  f.dataset.b = '1';
+  f.addEventListener('click', () => { sfx('good'); petBump('fed',12); renderPet(); toast('🥬 A Capi le encanta la merienda'); });
+  h.addEventListener('click', () => { sfx('click'); petBump('joy',8); renderPet(); toast('✋ Capi hace ruiditos felices'); });
+}
+
+/* ---------- Sala Glow: chat en vivo + stickers ---------- */
+let roomCh = null, roomBound = false;
+const STICKERS = ['💜','😂','🔥','🎉','🦫','👾','🌟','🙌','😎','🍀'];
+function roomNick(){ return (state.user && state.user.name) ? state.user.name : 'Invitado'; }
+function chatInit(){
+  const box = $('#roomMessages'), form = $('#roomForm'),
+        inp = $('#roomInput'), st = $('#roomStickers');
+  if(!box) return;
+  if($('#roomNick')) $('#roomNick').textContent = 'conectado como ' + roomNick();
+  if(roomBound) return;
+  roomBound = true;
+  try{
+    roomCh = new BroadcastChannel('mindglow-room-v1');
+    roomCh.onmessage = e => roomRender(e.data,false);
+  }catch(err){}
+  st.innerHTML = STICKERS.map(s =>
+    '<button type="button" class="room-sticker" data-s="'+s+'">'+s+'</button>').join('');
+  $$('#roomStickers .room-sticker').forEach(b => b.addEventListener('click', () => {
+    sfx('click'); roomSend({ t:'', s:b.dataset.s });
+  }));
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = inp.value.trim(); if(!v) return;
+    inp.value = ''; roomSend({ t:v });
+  });
+  roomRender({ n:'Glow', t:'Bienvenidos a la Sala Glow 💬 Abre esta misma página en otra pestaña o ventana del navegador y verán los mensajes aparecer EN VIVO. Prueben los stickers 🎉', sys:true }, false);
+}
+function roomSend(m){
+  m.n = roomNick(); m.ts = Date.now();
+  try{ if(roomCh) roomCh.postMessage(m); }catch(err){}
+  roomRender(m,true);
+}
+function roomRender(m, mine){
+  const box = $('#roomMessages'); if(!box) return;
+  const d = document.createElement('div');
+  d.className = 'room-msg' + (mine?' me':'') + (m.sys?' sys':'');
+  if(m.s){
+    const sp = document.createElement('span');
+    sp.className = 'room-bigsticker'; sp.textContent = m.s;
+    d.appendChild(sp);
+    d.appendChild(document.createElement('br'));
+  } else {
+    d.appendChild(document.createTextNode(m.t));
+    d.appendChild(document.createElement('br'));
+  }
+  const who = document.createElement('small');
+  who.textContent = m.sys ? '· sala ·' : (m.n + (mine?' (tú)':''));
+  d.appendChild(who);
+  box.appendChild(d); box.scrollTop = box.scrollHeight;
+}
+
+/* ---------- Glow Art: imágenes generativas de la IA ---------- */
+function hashStr(s){
+  let h = 2166136261;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h,16777619); }
+  return h >>> 0;
+}
+function aiArtBubble(prompt){
+  const box = $('#chatMessages'); if(!box) return;
+  const d = document.createElement('div'); d.className = 'bubble ai ai-art';
+  const c = document.createElement('canvas');
+  c.className = 'art-cv'; c.width = 480; c.height = 300;
+  const cap = document.createElement('div'); cap.className = 'art-cap';
+  cap.textContent = '✨ Glow Art · "' + prompt.slice(0,64) + '"';
+  d.appendChild(c); d.appendChild(cap);
+  box.appendChild(d);
+  drawGlowArt(c.getContext('2d'), c.width, c.height, hashStr(prompt));
+  box.scrollTop = box.scrollHeight;
+}
+function drawGlowArt(x,W,H,seed){
+  const rand = () => { const v = Math.sin(seed += 12.9898) * 43758.5453; return v - Math.floor(v); };
+  const h0 = rand()*360;
+  const bg = x.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'hsl('+h0+' 45% 10%)');
+  bg.addColorStop(1,'hsl('+((h0+70)%360)+' 50% 16%)');
+  x.fillStyle = bg; x.fillRect(0,0,W,H);
+  for(let i=0;i<3;i++){
+    const cx=W*(.2+rand()*.6), cy=H*(.25+rand()*.5), r=40+rand()*90, hh=(h0+i*90)%360;
+    const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+    g.addColorStop(0,'hsla('+hh+' 90% 65%,.55)');
+    g.addColorStop(1,'hsla('+hh+' 90% 65%,0)');
+    x.fillStyle=g; x.beginPath(); x.arc(cx,cy,r,0,7); x.fill();
+  }
+  for(let i=0;i<120;i++){
+    x.fillStyle='rgba(255,255,255,'+(rand()*.7+.1)+')';
+    x.fillRect(rand()*W,rand()*H,1.6,1.6);
+  }
+  x.lineWidth = 1.4;
+  for(let i=0;i<4;i++){
+    x.strokeStyle = 'hsla('+((h0+40*i)%360)+' 85% 72%,.5)';
+    x.beginPath();
+    x.ellipse(W/2,H/2, W*.12+i*W*.09, (W*.06+i*W*.05)*.6, rand()*3.14, 0, 7);
+    x.stroke();
+  }
+  const ox=W*(.3+rand()*.4), oy=H*(.3+rand()*.4);
+  const og=x.createRadialGradient(ox,oy,0,ox,oy,34);
+  og.addColorStop(0,'rgba(255,255,255,.95)');
+  og.addColorStop(.4,'hsla('+((h0+180)%360)+' 95% 70%,.9)');
+  og.addColorStop(1,'hsla('+((h0+180)%360)+' 95% 70%,0)');
+  x.fillStyle=og; x.beginPath(); x.arc(ox,oy,34,0,7); x.fill();
+}
+
+/* ---------- Guía personalizada + rival CPU ---------- */
+function wPlan(){
+  const pend = state.tasks.filter(t=>!t.done).length;
+  const lastTest = state.wellnessLog[state.wellnessLog.length-1];
+  let plan = 'Tu plan personalizado'+(firstName()?', '+firstName():'')+':\n';
+  plan += '1) ' + (pend ? pend+' tarea(s) pendientes: ataca la MÁS corta primero'
+                       : 'Añade a Tareas lo más importante de hoy') + '\n';
+  plan += '2) ' + (state.focus ? 'Un bloque Focus de 25 min (ya llevas '+state.focus+')'
+                             : 'Tu primer bloque Focus de 15 min, para arrancar suave') + '\n';
+  plan += '3) ' + (lastTest && lastTest.s < 20
+                 ? 'Tu último test salió bajo: 1 minuto de respiración en Calma antes de estudiar'
+                 : 'Cierra con algo tuyo: un juego o explorar Glow Space') + '\n';
+  plan += state.streak > 1
+    ? 'Y llevas '+state.streak+' días seguidos 🔥 no rompas la cadena.'
+    : 'Empieza tu racha HOY: vuelve mañana y suma día 2 🔥';
+  return plan;
+}
+function rivalRate(){
+  const lv = Math.min(25, state.level-1);
+  const base = {easy:.78, normal:.92, hard:1.04}[difficulty] || .92;
+  return base * (1 + lv*.01);
+}
+
+/* ---------- Fotos del equipo ---------- */
+function pickImage(cb){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = () => {
+    const f = inp.files[0]; if(!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 140;
+        const cx = cv.getContext('2d');
+        const s = Math.min(im.width, im.height);
+        cx.drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,140,140);
+        cb(cv.toDataURL('image/jpeg',.82));
+      };
+      im.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+
+/* ---------- Mini reproductor de música ---------- */
+function miniPlayerInit(){
+  if($('#miniPlayer')) return;
+  const el = document.createElement('div'); el.id = 'miniPlayer';
+  el.innerHTML = '<button type="button" id="mpPlay" title="Reproducir/Pausar">▶</button>'+
+    '<span id="mpTitle" title="Abrir Calma">Música MindGlow</span>'+
+    '<button type="button" id="mpNext" title="Siguiente pista">⏭</button>';
+  document.body.appendChild(el);
+  $('#mpPlay').addEventListener('click', () => musicOn ? musicStop() : musicStart());
+  $('#mpNext').addEventListener('click', () => {
+    musicIndex = (musicIndex+1)%TRACKS.length;
+    const was = musicOn;
+    musicStop(); updMusicMeta(); if(was) musicStart();
+  });
+  $('#mpTitle').addEventListener('click', () => showView('calm'));
+}
+
 /* ---------- Arranque ---------- */
 function init(){
   buildNav();
@@ -1849,6 +2149,9 @@ function init(){
   settingsInit();
   renderTeam();
   donateInit();
+  miniPlayerInit();
+  petDecay();
+  petInit();
   document.body.classList.toggle('reduced-motion', state.reduced);
   $('#soundBtn').textContent = state.sound?'🔊':'🔇';
   ensureStreak();

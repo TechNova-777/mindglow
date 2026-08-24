@@ -65,6 +65,7 @@
           <div><span class="top-kicker" id="pageKicker">MIND GLOW 3.0</span><h2 id="pageTitle">Inicio</h2></div>
         </div>
         <div class="topbar-actions">
+          <span id="streakChip" class="chip-streak" title="Días seguidos usando Mind Glow">🔥 <b id="streakNum">0</b></span>
           <button id="donateBtn" class="icon-btn" title="Donaciones">💜</button>
           <button id="soundBtn" class="icon-btn" title="Sonido">🔊</button>
           <button id="profileBtn" class="avatar" title="Perfil">J</button>
@@ -99,6 +100,14 @@
             <button class="quick-card" data-view="focus"><span>🎯</span><b>Concentrarme</b><small>Pomodoro flexible</small></button>
             <button class="quick-card" data-view="arcade"><span>🎮</span><b>Despejarme</b><small>Arcade + secretos</small></button>
             <button class="quick-card" data-view="space"><span>🌌</span><b>Glow Space</b><small>Tu universo evoluciona</small></button>
+            <button class="quick-card" data-view="chat"><span>💬</span><b>Sala Glow</b><small>Chat + stickers en vivo</small></button>
+            <button class="quick-card" data-view="wellness"><span>💚</span><b>Bienestar+</b><small>Test + progreso</small></button>
+          </div>
+
+          <div class="glass panel streak-week">
+            <div class="panel-label">RACHA DE ESTA SEMANA</div>
+            <div class="week-dots" id="weekDots"></div>
+            <p class="streak-note" id="streakNote">Entra cada día para mantener tu fuego 🔥 encendido.</p>
           </div>
 
           <div class="home-grid">
@@ -396,6 +405,7 @@
                 <input id="teamName" class="text-input" placeholder="Nombre del miembro" required>
                 <button class="btn primary">+ Añadir</button>
               </form>
+              <small class="help-note">📸 Toca la foto circular de cada integrante para poner su imagen real.</small>
             </div>
             <button type="button" class="accordion-item"><span>🎓</span><div><b>Estudiantes</b><small>Recursos, servicios y orientación</small></div><i>＋</i></button>
             <div class="accordion-panel">
@@ -487,6 +497,47 @@
             <h3 id="panelTitle">Capa 1 · Génesis</h3>
             <p class="panel-sub" id="panelSub">Contenido desbloqueado con tu nivel</p>
             <div class="space-cards" id="spaceCards"></div>
+          </div>
+
+          <div class="glass panel pet-panel" id="petPanel">
+            <div class="pet-face" id="petFace">🦫</div>
+            <div class="pet-info">
+              <div class="section-head" style="margin-bottom:6px"><div><p class="eyebrow">MASCOTA VIRTUAL</p><h3 id="petName">Capi el Capibara</h3></div></div>
+              <p class="pet-mood" id="petMood">Está tranquilo.</p>
+              <div class="pet-stats">
+                <label>🍖 Alimento<i><b id="petFedBar"></b></i><span id="petFedVal">70%</span></label>
+                <label>⚡ Energía<i><b id="petEnergyBar"></b></i><span id="petEnergyVal">70%</span></label>
+                <label>🎉 Alegría<i><b id="petJoyBar"></b></i><span id="petJoyVal">70%</span></label>
+              </div>
+              <div class="result-actions">
+                <button type="button" class="btn primary" id="petFeed">🥬 Alimentar</button>
+                <button type="button" class="btn ghost" id="petPet">✋ Acariciar</button>
+                <button type="button" class="btn ghost" data-view="arcade">🎮 Juntar alegría</button>
+              </div>
+              <p class="help-note">Capi se alimenta cuando respiras, gana energía con Focus y alegría cuando juegas. Si no lo visitas, se pone triste.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== CHAT SALA ===== -->
+        <section class="view" id="view-chat">
+          <div class="page-title">
+            <p class="eyebrow">COMUNIDAD EN VIVO</p>
+            <h1>Sala <span>Glow.</span></h1>
+            <p>Un chat en tiempo real para coordinarte con tu equipo: mensajes, stickers gigantes y cero registros. Funciona entre pestañas y ventanas de este navegador — perfecto para demostraciones en clase.</p>
+          </div>
+          <div class="glass panel room-wrap">
+            <div class="room-head">
+              <span class="room-dot"></span><b># sala-mindglow</b>
+              <small id="roomNick">conectado</small>
+            </div>
+            <div class="room-messages" id="roomMessages"></div>
+            <div class="room-stickers" id="roomStickers"></div>
+            <form class="room-form" id="roomForm">
+              <input id="roomInput" class="text-input" placeholder="Escribe un mensaje…" maxlength="240" autocomplete="off">
+              <button class="btn primary" type="submit">Enviar ➤</button>
+            </form>
+            <small class="help-note">💡 Tip del equipo: para chat entre distintos computadores se conecta una base de datos online (Firebase) — pídele al equipo que la active.</small>
           </div>
         </section>
 
