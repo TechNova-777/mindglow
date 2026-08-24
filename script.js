@@ -1966,9 +1966,30 @@ function petInit(){
 }
 
 /* ---------- Sala Glow: chat en vivo + stickers ---------- */
-let roomCh = null, roomBound = false;
+let roomCh = null, roomBound = false, roomMyId = Math.random().toString(36).slice(2,10);
 const STICKERS = ['💜','😂','🔥','🎉','🦫','👾','🌟','🙌','😎','🍀'];
+const ROOM_TOPIC = 'mindglow-sala-x7kq29'; /* canal único del equipo */
 function roomNick(){ return (state.user && state.user.name) ? state.user.name : 'Invitado'; }
+function netListen(){
+  try{
+    const es = new EventSource('https://ntfy.sh/'+ROOM_TOPIC+'/sse');
+    es.onmessage = e => {
+      try{
+        const ev = JSON.parse(e.data);
+        if(ev.event !== 'message') return;
+        const m = JSON.parse(ev.message);
+        if(!m || m.mid === roomMyId) return;
+        sfx('click');
+        roomRender(m,false);
+      }catch(err){}
+    };
+  }catch(err){}
+}
+function netSend(m){
+  try{
+    fetch('https://ntfy.sh/'+ROOM_TOPIC, { method:'POST', body:JSON.stringify(m) });
+  }catch(err){}
+}
 function chatInit(){
   const box = $('#roomMessages'), form = $('#roomForm'),
         inp = $('#roomInput'), st = $('#roomStickers');
@@ -1990,11 +2011,13 @@ function chatInit(){
     const v = inp.value.trim(); if(!v) return;
     inp.value = ''; roomSend({ t:v });
   });
-  roomRender({ n:'Glow', t:'Bienvenidos a la Sala Glow 💬 Abre esta misma página en otra pestaña o ventana del navegador y verán los mensajes aparecer EN VIVO. Prueben los stickers 🎉', sys:true }, false);
+  roomRender({ n:'Glow', t:'Bienvenidos a la Sala Glow 💬 Este chat es GLOBAL: los mensajes viajan por internet — abre Mind Glow en otro celular o computador y verán todo EN VIVO. Prueben los stickers 🎉', sys:true }, false);
+  netListen();
 }
 function roomSend(m){
-  m.n = roomNick(); m.ts = Date.now();
+  m.n = roomNick(); m.ts = Date.now(); m.mid = roomMyId;
   try{ if(roomCh) roomCh.postMessage(m); }catch(err){}
+  netSend(m);
   roomRender(m,true);
 }
 function roomRender(m, mine){
