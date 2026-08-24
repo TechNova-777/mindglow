@@ -6,8 +6,7 @@
    ============================================================ */
 const GOOGLE_CLIENT_ID = ''; // ← PEGA AQUÍ TU CLIENT ID DE GOOGLE
 const FORMSPREE_ID     = 'mqpzondw'; // ← ID de Formspree: los comentarios llegan al correo del equipo
-const DONATE_YAPE      = '999 888 777'; // ← CAMBIA por el número de Yape del equipo
-const DONATE_PLIN      = '999 888 777'; // ← CAMBIA por el número de Plin
+const DONATE_YAPE      = '939 109 091'; // ← Número de Yape del equipo Mind Glow
 const DONATE_KOFI      = '';            // ← opcional: enlace tipo https://ko-fi.com/mindglow
 
 /* ---------- Utilidades ---------- */
@@ -1704,7 +1703,6 @@ function topbarInit(){
 
 function donateInit(){
   $('#yapeNum').textContent = DONATE_YAPE;
-  $('#plinNum').textContent = DONATE_PLIN;
   if(DONATE_KOFI){
     const k = $('#kofiLink');
     k.href = DONATE_KOFI; k.style.display = 'block';
@@ -1723,7 +1721,6 @@ function donateInit(){
       .catch(() => toast(txt));
   };
   $('#copyYape').addEventListener('click', () => copy(DONATE_YAPE,'📲 Yape copiado: '+DONATE_YAPE));
-  $('#copyPlin').addEventListener('click', () => copy(DONATE_PLIN,'📲 Plin copiado: '+DONATE_PLIN));
 }
 
 /* ---------- Arranque ---------- */
