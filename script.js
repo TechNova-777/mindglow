@@ -427,7 +427,7 @@ function aiInit(){
       const facts=['Tu cerebro usa ~20% de tu energía aunque pesa solo 2%.','Estudiar antes de dormir mejora la memoria: consolidas mientras duermes.','Cada vez que aprendes algo, tus neuronas crean conexiones físicas nuevas.','La música a 60 bpm sincroniza tu ritmo cardíaco y reduce el estrés.'];
       reply='🧠 '+facts[Math.floor(Math.random()*facts.length)];
     } else if(/\bmusica\b|cancion|sonidos/.test(s)){
-      intent='music'; reply='Puedo sugerirte: música generativa en Calma (dos temas originales) o sonidos ambientales de lluvia, océano, bosque y río. ¿Cuál va contigo?';
+      intent='music'; reply='Puedo sugerirte: música original de Mind Glow (tres pistas) o sonidos ambientales de lluvia, océano, bosque y río. ¿Cuál va contigo?';
       actions=[['🎵 Música y sonidos','calm']];
     } else if(/hola|buenas|hey|que tal|saludos/.test(s)){
       intent='hello'; reply=saludo+(firstName()?', '+firstName():'')+'! Cuéntame qué quieres conseguir hoy: concentrarte, relajarte, organizarte o jugar.';
@@ -579,17 +579,16 @@ function ambientButtons(){
   }));
 }
 
-/* ---------- Música generativa ---------- */
-let musicIndex=0, musicTimer=null, musicStep=0, musicOn=false, musicT0=0;
+/* ---------- Música local de Mind Glow ---------- */
+let musicIndex=0, musicOn=false;
+const musicAudio = new Audio();
+musicAudio.preload = 'metadata';
+musicAudio.loop = false;
+musicAudio.volume = 0.65;
 const TRACKS = [
-  { title:'Brilla, Brilla (MindGlow Original)', bpm:82, base:261.63,
-    mel:[0,4,7,12,  9,7,9,12,   7,4,7,9,   12,14,12,9,
-         5,9,12,16, 14,12,14,16, 12,9,7,9,  7,4,0,0 ],
-    bass:[-12,-5,-12,-5, -17,-5,-12,-5, -19,-7,-19,-7, -12,-5,-12,-5 ] },
-  { title:'La Luz Dentro de Ti', bpm:90, base:220,
-    mel:[0,3,7,10,  12,10,12,14, 15,14,12,10, 7,10,7,3,
-         5,8,12,15, 17,15,14,12,  10,12,10,8,  7,3,0,0 ],
-    bass:[-12,-7,-12,-7, -14,-9,-14,-9, -17,-9,-17,-9, -14,-7,-14,-7 ] }
+  { title:'Brilla, Brilla', file:'MindGlow - Brilla, Brilla - Treblo.mp3' },
+  { title:'La Luz Dentro de Ti', file:'MindGlow - La Luz Dentro de Ti - Treblo.mp3' },
+  { title:'La Luz Está Dentro de Ti', file:'MindGlow - La Luz Está Dentro de Ti - Treblo.mp3' }
 ];
 function pluck(f, vol, dur, type){
   const ctx = ensureCtx(); if(!ctx) return;
@@ -611,51 +610,76 @@ function wakeChime(){
   setTimeout(() => pluck(523.25/2, .05, 2.6, 'sine'),    1900);
   petBump('energy',12); renderPet();
 }
-function musicTick(){
-  const t = TRACKS[musicIndex];
-  const i = musicStep % t.mel.length;
-  pluck(t.base * Math.pow(2, t.mel[i]/12), .11, .9, 'sine');
-  if(musicStep % 2 === 0){
-    const b = t.bass[Math.floor(musicStep/2) % t.bass.length];
-    if(b !== undefined) pluck(t.base * Math.pow(2, b/12), .06, 1.7, 'triangle');
-  }
-  if(musicStep % 8 === 4)
-    pluck(t.base * Math.pow(2, (t.mel[i]+12)/12), .035, .5, 'sine');
-  musicStep++;
-  $('#musicProgress').value = (musicStep % 32)/32*100;
-  $('#musicCurrent').textContent = fmt((performance.now()-musicT0)/1000);
+function updateMusicButtons(){
+  const label = musicOn ? '⏸' : '▶';
+  const main = $('#musicPlay'); if(main) main.textContent = label;
+  const mini = $('#mpPlay'); if(mini) mini.textContent = label;
+}
+function syncMusicProgress(){
+  const progress = $('#musicProgress');
+  const current = $('#musicCurrent');
+  const duration = $('#musicDuration');
+  if(!progress || !current || !duration) return;
+  const hasDuration = Number.isFinite(musicAudio.duration) && musicAudio.duration > 0;
+  progress.disabled = !hasDuration;
+  progress.value = hasDuration ? (musicAudio.currentTime / musicAudio.duration) * 100 : 0;
+  current.textContent = fmt(musicAudio.currentTime || 0);
+  duration.textContent = hasDuration ? fmt(musicAudio.duration) : '0:00';
 }
 function musicStop(){
-  if(musicTimer){ clearInterval(musicTimer); musicTimer=null; }
-  musicOn=false; $('#musicPlay').textContent='▶';
-  const mp=$('#mpPlay'); if(mp) mp.textContent='▶';
+  musicAudio.pause();
+  musicOn=false;
+  updateMusicButtons();
 }
 function musicStart(){
   if(!state.sound){ toast('🔇 Activa los sonidos primero'); return; }
-  if(!ensureCtx()) return;
-  musicStop();
-  musicOn=true; $('#musicPlay').textContent='⏸'; musicT0=performance.now();
-  const mp=$('#mpPlay'); if(mp) mp.textContent='⏸';
-  musicTimer=setInterval(musicTick, 60000/TRACKS[musicIndex].bpm/2);
-  musicTick();
+  if(musicAudio.ended) musicAudio.currentTime=0;
+  musicOn=true;
+  updateMusicButtons();
+  const play = musicAudio.play();
+  if(play && play.catch){
+    play.catch(() => {
+      musicOn=false;
+      updateMusicButtons();
+      toast('No se pudo reproducir esta pista');
+    });
+  }
 }
 function updMusicMeta(){
   const t = TRACKS[musicIndex];
   $('#musicTitle').textContent = t.title;
-  $('#musicSubtitle').textContent = 'MindGlow Original · síntesis en vivo';
+  $('#musicSubtitle').textContent = 'MindGlow Original · pista local';
   const mt = $('#mpTitle'); if(mt) mt.textContent = '♪ ' + t.title;
+}
+function selectMusic(index, autoplay){
+  musicStop();
+  musicIndex = (index + TRACKS.length) % TRACKS.length;
+  musicAudio.src = encodeURI(TRACKS[musicIndex].file);
+  musicAudio.load();
+  updMusicMeta();
+  syncMusicProgress();
+  if(autoplay) musicStart();
 }
 function musicInit(){
   $('#musicPlay').addEventListener('click', () => musicOn ? musicStop() : musicStart());
   $('#musicNext').addEventListener('click', () => {
-    musicIndex=(musicIndex+1)%TRACKS.length; const was=musicOn;
-    musicStop(); updMusicMeta(); if(was) musicStart();
+    selectMusic(musicIndex + 1, musicOn);
   });
   $('#musicPrev').addEventListener('click', () => {
-    musicIndex=(musicIndex-1+TRACKS.length)%TRACKS.length; const was=musicOn;
-    musicStop(); updMusicMeta(); if(was) musicStart();
+    selectMusic(musicIndex - 1, musicOn);
   });
-  updMusicMeta();
+  $('#musicProgress').addEventListener('input', () => {
+    if(Number.isFinite(musicAudio.duration))
+      musicAudio.currentTime = (Number($('#musicProgress').value)/100) * musicAudio.duration;
+  });
+  musicAudio.addEventListener('loadedmetadata', syncMusicProgress);
+  musicAudio.addEventListener('timeupdate', syncMusicProgress);
+  musicAudio.addEventListener('ended', () => selectMusic(musicIndex + 1, true));
+  musicAudio.addEventListener('error', () => {
+    musicStop();
+    toast('No se pudo cargar la pista de Mind Glow');
+  });
+  selectMusic(0, false);
 }
 
 /* ---------- Focus (pomodoro) ---------- */
@@ -2144,11 +2168,11 @@ function miniPlayerInit(){
     '<span id="mpTitle" title="Abrir Calma">Música MindGlow</span>'+
     '<button type="button" id="mpNext" title="Siguiente pista">⏭</button>';
   document.body.appendChild(el);
+  updMusicMeta();
+  updateMusicButtons();
   $('#mpPlay').addEventListener('click', () => musicOn ? musicStop() : musicStart());
   $('#mpNext').addEventListener('click', () => {
-    musicIndex = (musicIndex+1)%TRACKS.length;
-    const was = musicOn;
-    musicStop(); updMusicMeta(); if(was) musicStart();
+    selectMusic(musicIndex + 1, musicOn);
   });
   $('#mpTitle').addEventListener('click', () => showView('calm'));
 }
