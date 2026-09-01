@@ -29,7 +29,10 @@ const defaultState = {
   teamImgs:{},
   wellnessLog:[],
   team:[{name:'JACK'},{name:'CAMILA'},{name:'CLARA'},{name:'ANDREA'},{name:'EDISON'}],
-  feedback:[]
+  feedback:[],
+  studioProject:null,
+  studioDraft:'',
+  studioRun:null
 };
 let state = loadState();
 
@@ -42,6 +45,9 @@ function loadState(){
     s.tasks      = Array.isArray(s.tasks) ? s.tasks : [];
     s.journal    = Array.isArray(s.journal) ? s.journal : [];
     s.feedback   = Array.isArray(s.feedback) ? s.feedback : [];
+    s.studioProject = (s.studioProject && typeof s.studioProject === 'object') ? s.studioProject : null;
+    s.studioDraft = typeof s.studioDraft === 'string' ? s.studioDraft : '';
+    s.studioRun = (s.studioRun && typeof s.studioRun === 'object') ? s.studioRun : null;
     s.wellnessLog= Array.isArray(s.wellnessLog) ? s.wellnessLog : [];
     s.teamImgs   = (s.teamImgs && typeof s.teamImgs==='object') ? s.teamImgs : {};
     if(!s.pet || typeof s.pet!=='object')
@@ -53,7 +59,7 @@ function loadState(){
     return s;
   }catch(e){ return JSON.parse(JSON.stringify(defaultState)); }
 }
-function save(){ localStorage.setItem(KEY, JSON.stringify(state)); updateUI(); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ console.warn('No se pudo guardar el progreso local', e); } updateUI(); }
 
 /* ---------- Audio base ---------- */
 let actx = null;
@@ -108,7 +114,7 @@ function ensureStreak(){
 }
 
 /* ---------- Navegación ---------- */
-const NAV = [['home','⌂','Inicio'],['ai','✦','Glow AI'],['calm','◌','Calma'],
+const NAV = [['home','⌂','Inicio'],['studio','◈','Game Studio'],['ai','✦','Glow AI'],['calm','◌','Calma'],
   ['wellness','💚','Bienestar+'],['arcade','⌁','Arcade'],['focus','◷','Focus'],
   ['tasks','✓','Tareas'],['journal','▱','Diario'],['chat','💬','Sala Glow'],
   ['school','🏫','Mi colegio'],['space','✧','Glow Space'],['profile','○','Perfil']];
@@ -118,8 +124,10 @@ function buildNav(){
     '<button class="nav-item" data-view="'+n[0]+'"><span>'+n[1]+'</span><b>'+n[2]+'</b></button>').join('');
 }
 function showView(v){
+  if(v !== 'studio' && document.body.classList.contains('studio-open')) Studio.saveRun();
   $$('.view').forEach(x => x.classList.toggle('active', x.id === 'view-'+v));
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === v));
+  document.body.classList.toggle('studio-open', v === 'studio');
   const labels = {}; NAV.forEach(n => labels[n[0]] = n[2]);
   labels.settings = 'Configuración';
   $('#pageTitle').textContent  = labels[v] || 'Mind Glow';
@@ -130,6 +138,7 @@ function showView(v){
   if(v === 'wellness'){ wellnessInit(); wellnessRender(); }
   if(v === 'chat')    chatInit();
   if(v === 'space'){ Space.sync(); renderPet(); }
+  if(v === 'studio') setTimeout(() => { Studio.resize(); Studio.restore(); }, 40);
   if(v === 'profile'){ renderTeam(); authInit(); }
   if(innerWidth < 800) $('#sidebar').classList.remove('open');
 }
@@ -288,7 +297,7 @@ function aiInit(){
     }
     box.appendChild(d); box.scrollTop = box.scrollHeight;
   }
-  add('Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal.\nAhora puedo: resolver cálculos 🧮, decirte hora/fecha, lanzar moneda o dado 🎲, dibujar arte único ("dibujame un dragón") 🎨 y armarte un plan según tu progreso ("necesito una guia").\n¿Por dónde empezamos?','ai');
+  add('Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal local.\nPuedo ayudarte a organizar una sesión de estudio, resolver cálculos, decirte hora o fecha, lanzar moneda o dado, generar Glow Art y usar tu progreso de Mind Glow para sugerirte una acción.\nFunciona sin API key: no envío tus mensajes a servidores. ¿Por dónde empezamos?','ai');
 
   /* --- Preguntas de conversación: respuestas divertidas --- */
   const pick = a => a[Math.floor(Math.random()*a.length)];
@@ -342,18 +351,30 @@ function aiInit(){
     let actions = [];
     const h = new Date().getHours();
     const saludo = h<12 ? 'Buenos días' : h<19 ? 'Buenas tardes' : 'Buenas noches';
-    let reply = 'Puedo darte una siguiente acción pequeña. Prueba: "estoy estresado", "no puedo concentrarme", "quiero jugar", "mi progreso", un dato curioso… o hazme cualquiera de esas preguntas divertidas 😄';
+    const pending=state.tasks.filter(t=>!t.done).length, mood=state.mood ? state.mood.label.toLowerCase() : '';
+    let reply = 'Puedo darte una siguiente acción pequeña. Prueba: "estoy estresado", "no puedo concentrarme", "dame un plan de estudio", "quiero jugar", "mi progreso", un cálculo o un dato curioso.'+(pending?' Ahora tienes '+pending+' tarea(s) pendiente(s).':'')+(mood?' Noto que marcaste tu ánimo como '+mood+'.':'');
     const funHit = (!/panic|muriendo de|no puedo respirar/.test(s))
       ? FUNNY.find(f => f[0].test(s)) : null;
     if(funHit){
       intent='fun'; reply=pick(funHit[1]);
+    } else if(/videojuego|juego 3d|crear.*juego|crea.*juego|game studio/.test(s)){
+      state.studioDraft=text; intent='game-studio'; reply='Puedo convertir esa idea en un mundo 3D jugable dentro de Mind Glow. Dejé tu descripción preparada en Game Studio para que no tengas que copiarla.';
+      actions=[['◈ Abrir Game Studio','studio']];
+    } else if(/resum|resumen|resume esto|texto largo/.test(s)){
+      intent='summarize'; reply='Pásame el texto y lo convierto en 3 ideas clave, palabras importantes y una pregunta para comprobar que lo entendiste. Si es para una tarea, también puedo dividirlo en pasos.';
+      actions=[['✓ Abrir Tareas','tasks'],['▱ Abrir Diario','journal']];
+    } else if(/explica|explicame|no entiendo|que significa|como aprendo/.test(s)){
+      intent='explain'; reply='Vamos por partes: dime el tema exacto y tu curso. Te lo explicaré con un ejemplo sencillo, una comparación y una mini pregunta; no solo te daré la respuesta.';
+    } else if(/ayuda|opciones|que puedes hacer|funciones/.test(s)){
+      intent='capabilities'; reply='Puedo crear mundos 3D desde texto, organizar tareas, preparar Focus, guiar respiración, calcular, resumir textos y revisar tu progreso. También puedo editar tu juego con instrucciones como “añade enemigos” o “cambia el escenario”.';
+      actions=[['◈ Crear juego 3D','studio'],['✓ Organizarme','tasks'],['◷ Concentrarme','focus']];
     } else if(/dibuj|hazme una imagen|imagen de|arte de/.test(s)){
       intent='art';
       const tema = text.replace(/dibuja(me)?|dibujar|hazme una imagen de|hazme.*imagen|imagen de|arte de/gi,'').trim() || 'tu idea';
       reply='🎨 Modo Glow Art activado. Generé esta pieza ÚNICA e irrepetible inspirada en "'+tema+'". Cada prompt crea un arte diferente — pídeme otro.';
       actions=[['✦ Hablar más con la IA','ai']];
       setTimeout(() => aiArtBubble(tema), 150);
-    } else if(/guia|no se que hacer|plan para hoy|plan de estudio|ayudame a organizar|que hago ahora/.test(s)){
+    } else if(/guia|no se que hacer|plan para hoy|plan de estudio|plan rapido|ayudame a organizar|que hago ahora/.test(s)){
       intent='guide'; reply=wPlan();
       actions=[['✓ Ver tareas','tasks'],['◷ Ir a Focus','focus'],['💚 Hacer el test','wellness']];
     } else if(/calc|cuanto es|cuanto vale|[0-9]\s*[\+\-\*x×\/÷]\s*[0-9]/.test(s)){
@@ -1170,17 +1191,142 @@ const Space = (function(){
   return { init:init, sync:sync };
 })();
 
+/* ---------- MIND GLOW GAME AI: generador 3D local ---------- */
+const Studio = (() => {
+  let renderer, scene, camera, clock, raf, spec = null, player = null, ready = false, running = false, busy = false, restoring = false;
+  let objects = { coins: [], hazards: [], enemies: [], rain: null };
+  let keys = {}, score = 0, collected = 0, nitro = 100, jumpY = 0, jumpV = 0, orbitYaw = Math.PI, orbitPitch = 0.28, orbitDistance = 10, drag = null;
+  const $s = id => document.getElementById(id);
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const norm = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const pick = (value, fallback) => value || fallback;
+  function parsePrompt(text){
+    const s = norm(text);
+    let genre = 'adventure', genreName = 'Aventura';
+    if(/carrer|coche|auto|vehiculo|velocidad|racing/.test(s)){ genre='racing'; genreName='Carreras'; }
+    else if(/plataform|obby|salto/.test(s)){ genre='platform'; genreName='Plataformas'; }
+    else if(/terror|horror|miedo/.test(s)){ genre='horror'; genreName='Terror'; }
+    else if(/superviv|isla|sobreviv/.test(s)){ genre='survival'; genreName='Supervivencia'; }
+    else if(/puzzle|rompecabe|logica/.test(s)){ genre='puzzle'; genreName='Puzzle'; }
+    else if(/estrateg|rpg|rol/.test(s)){ genre='strategy'; genreName='Estrategia'; }
+    let world = 'neon', worldName = 'Neon District';
+    if(/ciudad|futur|neon|cyber/.test(s)){ world='city'; worldName='Ciudad futurista'; }
+    else if(/isla|playa|mar|oceano/.test(s)){ world='island'; worldName='Isla flotante'; }
+    else if(/escuela|colegio|abandon/.test(s)){ world='school'; worldName='Escuela abandonada'; }
+    else if(/fantas|bosque|castillo|dragon/.test(s)){ world='fantasy'; worldName='Bosque fantástico'; }
+    else if(/espacio|planeta|galax/.test(s)){ world='space'; worldName='Órbita estelar'; }
+    const count = (rx, fallback) => { const m=s.match(rx); return m ? Math.max(1,Math.min(24,parseInt(m[1],10))) : fallback; };
+    const enemyDefault = genre==='horror' || genre==='survival' ? 5 : genre==='racing' ? 3 : 2;
+    const enemyCount = count(/(\d+)\s*(?:enemigos?|rivales?|npcs?)/, enemyDefault);
+    const coinCount = count(/(\d+)\s*(?:monedas?|coins?)/, genre==='puzzle'?6:12);
+    const obstacles = count(/(\d+)\s*(?:obstaculos?|trampas?)/, genre==='racing'?9:6);
+    return { prompt:String(text || '').trim(), genre, genreName, world, worldName, enemyCount, coinCount, obstacleCount:obstacles,
+      mapScale:/mapa.*grande|mundo.*grande|mas grande|más grande|gigante/.test(s)?1.55:1,
+      rain:/lluvia|llueve|lloviendo/.test(s), doubleJump:/doble salto|double jump/.test(s), nitro:/nitro|turbo/.test(s), boss:/jefe|boss/.test(s),
+      title: pick((genreName+' · '+worldName), 'Mundo Glow'), seed:Math.random() };
+  }
+  function initRenderer(){
+    if(ready) return true;
+    if(!window.THREE){ $s('studioGameStatus').textContent='Motor 3D no disponible sin conexión'; return false; }
+    const canvas=$s('studioViewport'); if(!canvas) return false;
+    renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true}); renderer.setPixelRatio(Math.min(devicePixelRatio||1,2)); renderer.shadowMap.enabled=true;
+    scene=new THREE.Scene(); camera=new THREE.PerspectiveCamera(52,1,.1,300); camera.position.set(7,6,9); clock=new THREE.Clock(); ready=true;
+    canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
+    canvas.addEventListener('pointermove',e=>{if(!drag)return; orbitYaw-=(e.clientX-drag.x)*.008; orbitPitch=Math.max(.12,Math.min(.75,orbitPitch+(e.clientY-drag.y)*.006)); drag={x:e.clientX,y:e.clientY};});
+    canvas.addEventListener('pointerup',()=>drag=null); canvas.addEventListener('wheel',e=>{orbitDistance=Math.max(5,Math.min(18,orbitDistance+e.deltaY*.01));},{passive:true});
+    addEventListener('resize',resize); resize(); raf=requestAnimationFrame(loop); return true;
+  }
+  function clearScene(){
+    if(!scene)return; while(scene.children.length){const c=scene.children[0];scene.remove(c);if(c.geometry)c.geometry.dispose();if(c.material){const mats=Array.isArray(c.material)?c.material:[c.material];mats.forEach(m=>m.dispose&&m.dispose());}}
+    objects={coins:[],hazards:[],enemies:[],rain:null}; player=null;
+  }
+  function mat(color,rough=.7,metal=0){return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});}
+  function addBox(x,y,z,w,h,d,color,metal=0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(color,.54,metal));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;}
+  function buildWorld(){
+    clearScene(); const scale=spec.mapScale, dark=spec.world==='space'?'#030716':spec.world==='school'?'#10121e':'#070b19'; scene.background=new THREE.Color(dark); scene.fog=new THREE.Fog(dark,18,72);
+    scene.add(new THREE.HemisphereLight(spec.world==='horror'?0x586080:0x9ea8ff,0x101322,1.6)); const sun=new THREE.DirectionalLight(spec.world==='horror'?0x8e9aff:0x75e8ff,2.5);sun.position.set(8,14,6);sun.castShadow=true;scene.add(sun);
+    const floorColor=spec.world==='island'?0x193b52:spec.world==='fantasy'?0x183c2c:spec.world==='school'?0x222334:0x0b1630; const floor=new THREE.Mesh(new THREE.PlaneGeometry(58*scale,58*scale),mat(floorColor,.88));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+    const grid=new THREE.GridHelper(56*scale,Math.round(28*scale),0x2d5a8d,0x15213e);grid.position.y=.015;scene.add(grid);
+    if(spec.world==='city') for(let i=0;i<22;i++){const x=(i%6-2.5)*4.6,z=(Math.floor(i/6)-1.5)*5.2;const h=2+((i*7)%7);addBox(x,h/2,z,3.3,h,3.3,0x17274a,.25);addBox(x,h*.55,z-1.69,2.2,.08,.02,0x50d9d0,.6);}
+    if(spec.world==='school') for(let i=0;i<8;i++){const x=(i%4-1.5)*6,z=(Math.floor(i/4)-.5)*7;addBox(x,1.7,z,4.6,3.4,4.2,0x313246);}
+    if(spec.world==='island') for(let i=0;i<10;i++){const x=(i%5-2)*5,z=(Math.floor(i/5)-1)*7;const p=addBox(x,.5,z,3.8,1,3.8,0x3b6c7c);p.rotation.y=(i%3)*.25;}
+    if(spec.world==='fantasy') for(let i=0;i<14;i++){const x=(i%7-3)*4.3,z=(Math.floor(i/7)-1)*7;const t=new THREE.Mesh(new THREE.ConeGeometry(.75,3.8,7),mat(0x1c633f));t.position.set(x,1.9,z);t.castShadow=true;scene.add(t);}
+    if(spec.world==='space'){const stars=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:0xb9d5ff,size:.09}));const p=[];for(let i=0;i<500;i++)p.push((Math.random()-.5)*80,Math.random()*35+2,(Math.random()-.5)*80);stars.geometry.setAttribute('position',new THREE.Float32BufferAttribute(p,3));scene.add(stars);}
+    const playerMat=spec.genre==='racing'?0xff4fd8:0x51e0c0; player=new THREE.Group();
+    const body=addBox(0,0,0,spec.genre==='racing'?1.7:1.1,spec.genre==='racing'?.55:1.5,spec.genre==='racing'?2.7:1.1,playerMat,.45); body.position.set(0,spec.genre==='racing'?.7: .8,0); player.add(body);
+    if(spec.genre!=='racing'){for(const x of [-.42,.42]){const arm=addBox(x,1.12,-.42,.22,.72,.22,0xc9a6ff,.15);arm.rotation.z=x<0?-.14:.14;player.add(arm);}}
+    if(spec.genre==='racing'){for(const x of [-.78,.78])for(const z of [-.85,.85]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.18,12),mat(0x11131d,.9));w.rotation.z=Math.PI/2;w.position.set(x,.45,z);player.add(w);}}
+    player.position.set(0,0,10);scene.add(player);
+    for(let i=0;i<spec.coinCount;i++){const c=new THREE.Mesh(new THREE.TorusGeometry(.34,.11,8,16),mat(0xffd166,.3,.7));c.position.set((Math.random()-.5)*22*scale,.8,(Math.random()-.5)*28*scale);c.rotation.x=Math.PI/2;scene.add(c);objects.coins.push(c);}
+    for(let i=0;i<spec.obstacleCount;i++){const h=addBox((Math.random()-.5)*22*scale,.55,(Math.random()-.5)*28*scale,.9+Math.random(),1.1,.9+Math.random(),spec.genre==='horror'?0x9d315d:0xff658f,.25);objects.hazards.push(h);}
+    for(let i=0;i<spec.enemyCount+(spec.boss?1:0);i++){const e=new THREE.Mesh(new THREE.IcosahedronGeometry(spec.boss&&i===spec.enemyCount?.8:.5,1),mat(spec.boss&&i===spec.enemyCount?0xffae4d:0x8b7cff,.38,.3));e.position.set((Math.random()-.5)*20*scale,.7,(Math.random()-.5)*28*scale);e.castShadow=true;e.userData.boss=spec.boss&&i===spec.enemyCount;scene.add(e);objects.enemies.push(e);}
+    const goal=new THREE.Mesh(new THREE.TorusGeometry(2.2,.16,12,40),mat(0x51e0c0,.2,.6));goal.position.set(0,2,-22*scale);goal.rotation.x=Math.PI/2;scene.add(goal);
+    if(spec.rain){const n=360, pos=[];for(let i=0;i<n;i++)pos.push((Math.random()-.5)*40,Math.random()*22,(Math.random()-.5)*40);const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));objects.rain=new THREE.Points(g,new THREE.PointsMaterial({color:0x9fc9ff,size:.08,transparent:true,opacity:.8}));scene.add(objects.rain);}
+    score=0;collected=0;nitro=100;const savedRun=restoring&&state.studioRun&&state.studioRun.prompt===spec.prompt?state.studioRun:null;if(savedRun){score=savedRun.score||0;collected=savedRun.collected||0;nitro=Number.isFinite(savedRun.nitro)?savedRun.nitro:100;player.position.x=savedRun.x||0;player.position.z=Number.isFinite(savedRun.z)?savedRun.z:10;}updateHud(); $s('studioEmpty').classList.add('hidden'); $s('studioHud').classList.add('visible');
+  }
+  function updateHud(){if($s('studioScore'))$s('studioScore').textContent=score;if($s('studioCoins'))$s('studioCoins').textContent=collected;if($s('studioNitro'))$s('studioNitro').textContent=Math.round(nitro);}
+  function persist(){if(!spec)return;state.studioProject=JSON.parse(JSON.stringify(spec));save();}
+  function persistRun(){if(!spec||!player)return;state.studioRun={prompt:spec.prompt,score,collected,nitro,x:player.position.x,z:player.position.z};localStorage.setItem(KEY,JSON.stringify(state));}
+  function updateCamera(){if(!player||!camera)return;const eye=new THREE.Vector3(player.position.x,player.position.y+1.48,player.position.z);camera.position.lerp(eye,.32);const look=new THREE.Vector3(eye.x+Math.sin(orbitYaw)*5,eye.y+Math.sin(orbitPitch)*1.8,eye.z+Math.cos(orbitYaw)*5);camera.lookAt(look);}
+  function loop(){raf=requestAnimationFrame(loop);if(!scene||!camera)return;const dt=Math.min(clock.getDelta(),.05);if(player){objects.coins.forEach(c=>{if(c.visible)c.rotation.z+=dt*3;});if(objects.rain){const p=objects.rain.geometry.attributes.position;for(let i=1;i<p.count*3;i+=3){let y=p.array[i]-dt*18;p.array[i]=y<0?22:y;}p.needsUpdate=true;}if(running){const speed=(keys.shift&&spec.nitro&&nitro>0)?.28:.13;const forwardX=Math.sin(orbitYaw),forwardZ=Math.cos(orbitYaw),rightX=Math.cos(orbitYaw),rightZ=-Math.sin(orbitYaw);const side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),walk=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);if(keys.shift&&spec.nitro&&nitro>0)nitro=Math.max(0,nitro-dt*22);else nitro=Math.min(100,nitro+dt*5);player.position.x=Math.max(-14*spec.mapScale,Math.min(14*spec.mapScale,player.position.x+(rightX*side+forwardX*walk)*speed));player.position.z=Math.max(-25*spec.mapScale,Math.min(15*spec.mapScale,player.position.z+(rightZ*side+forwardZ*walk)*speed));if(keys.space&&jumpY<=.01){jumpV=spec.doubleJump?7:6;keys.space=false;}jumpV-=dt*16;jumpY=Math.max(0,jumpY+jumpV*dt);player.position.y=jumpY;player.rotation.y=orbitYaw;objects.coins.forEach(c=>{if(c.visible&&c.position.distanceTo(player.position)<1.25){c.visible=false;collected++;score+=10;sfx('good');}});objects.hazards.forEach(h=>{if(h.position.distanceTo(player.position)<1.05){score=Math.max(0,score-5);player.position.x-=forwardX*1.4;player.position.z-=forwardZ*1.4;sfx('bad');}});objects.enemies.forEach(e=>{if(e.visible){e.rotation.y+=dt*2;e.position.lerp(new THREE.Vector3(player.position.x,e.position.y,player.position.z),dt*.035);if(e.position.distanceTo(player.position)<1.1){score=Math.max(0,score-10);player.position.x-=forwardX*2;player.position.z-=forwardZ*2;sfx('bad');}}});updateHud();}updateCamera();}renderer.render(scene,camera);}
+  function resize(){if(!renderer||!camera)return;const wrap=$s('studioViewport')?.parentElement;if(!wrap)return;const w=wrap.clientWidth,h=wrap.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  function setPipeline(active){$$('#studioPipeline li').forEach((li,i)=>{li.classList.toggle('active',i===active);li.classList.toggle('done',i<active);});}
+  function renderSpec(){if(!spec)return;$s('studioGameTitle').textContent=spec.title;$s('studioGameStatus').textContent='Juego generado · '+spec.genreName;$s('studioSpec').innerHTML=[spec.genreName,spec.worldName,spec.enemyCount+' enemigos',spec.coinCount+' monedas',spec.obstacleCount+' obstáculos',spec.rain?'lluvia':'luz dinámica',spec.doubleJump?'doble salto':'movimiento WASD',spec.boss?'jefe final':'meta'].map(x=>'<span>'+x+'</span>').join('');}
+  async function generate(variation){if(busy)return;busy=true;running=false;const button=$s('studioGenerate');button.disabled=true;button.textContent='Construyendo mundo…';$s('studioEmpty').classList.remove('hidden');$s('studioHud').classList.remove('visible');for(let i=0;i<5;i++){setPipeline(i);await wait(230);}spec=parsePrompt($s('studioPrompt').value);if(variation)spec.seed=Math.random();if(initRenderer())buildWorld();renderSpec();setPipeline(5);$s('studioGameStatus').textContent='Juego listo · pulsa Jugar';button.disabled=false;button.textContent='✦ Generar mundo 3D';busy=false;state.studioDraft='';persist();addChat('Tu mundo está listo: '+spec.genreName+' en '+spec.worldName+'. Pulsa Jugar o dime qué quieres cambiar.','ai');}
+  function addChat(text,who){const box=$s('studioChat');if(!box)return;const d=document.createElement('div');d.className='studio-chat-msg '+who;d.innerHTML='<span>'+(who==='ai'?'✦':'◉')+'</span><p></p>';d.querySelector('p').textContent=text;box.appendChild(d);box.scrollTop=box.scrollHeight;}
+  function modify(text){if(!spec){addChat('Primero genera un mundo y luego lo editamos.','ai');return;}const s=norm(text);const m=s.match(/(\d+)\s*(?:enemigos?|rivales?)/);if(m)spec.enemyCount=Math.min(24,parseInt(m[1],10));const coins=s.match(/(\d+)\s*monedas?/);if(coins)spec.coinCount=Math.min(40,parseInt(coins[1],10));if(/mas grande|más grande|gigante|agranda/.test(s))spec.mapScale=Math.min(2.2,spec.mapScale+.35);if(/lluvia|llueve/.test(s))spec.rain=true;if(/doble salto/.test(s))spec.doubleJump=true;if(/nitro|turbo/.test(s))spec.nitro=true;if(/jefe|boss/.test(s))spec.boss=true;if(/ciudad|city/.test(s)){spec.world='city';spec.worldName='Ciudad futurista';}if(/isla|island/.test(s)){spec.world='island';spec.worldName='Isla flotante';}if(/escuela|school/.test(s)){spec.world='school';spec.worldName='Escuela abandonada';}if(/plataform|obby/.test(s)){spec.genre='platform';spec.genreName='Plataformas';}if(/carrer|racing|auto/.test(s)){spec.genre='racing';spec.genreName='Carreras';}spec.title=spec.genreName+' · '+spec.worldName;buildWorld();renderSpec();persist();addChat('Aplicado: '+text+'. El viewport ya tiene la versión actualizada.','ai');}
+  async function saveToFolder(){
+    if(!spec){toast('Genera un mundo antes de guardarlo');return;}
+    persist(); const payload=JSON.stringify({app:'Mind Glow Game AI',version:1,savedAt:new Date().toISOString(),project:spec,progress:state},null,2);
+    if(window.showDirectoryPicker){
+      try{const dir=await window.showDirectoryPicker({mode:'readwrite'});const file=await dir.getFileHandle('mindglow-project.json',{create:true});const writable=await file.createWritable();await writable.write(payload);await writable.close();toast('Proyecto guardado en la carpeta elegida');return;}catch(err){if(err&&err.name==='AbortError')return;}
+    }
+    const blob=new Blob([payload],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mindglow-project.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Descargado: guárdalo donde quieras');
+  }
+  function importProject(){const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.onchange=()=>{const file=input.files&&input.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result),incoming=data.project||data;if(!incoming||!incoming.prompt)throw new Error('invalid');spec=incoming;state.studioProject=incoming;if(data.progress&&typeof data.progress==='object'){Object.keys(defaultState).forEach(k=>{if(k in data.progress)state[k]=data.progress[k];});}state.studioDraft='';save();$s('studioPrompt').value=spec.prompt;if(initRenderer())buildWorld();renderSpec();setPipeline(5);toast('Proyecto importado y avance recuperado');}catch(e){toast('Ese archivo no es un proyecto Mind Glow válido');}};reader.readAsText(file);};input.click();}
+  function restoreProject(){
+    const draft=state.studioDraft;
+    if(draft){$s('studioPrompt').value=draft;setTimeout(()=>generate(false),80);return true;}
+    let saved=state.studioProject;
+    if(!saved){try{saved=JSON.parse(localStorage.getItem('mindGlowStudio')||'null');}catch(e){saved=null;}}
+    if(saved&&saved.prompt)$s('studioPrompt').value=saved.prompt;
+    if(!saved||!saved.prompt)return false;
+    spec=saved;restoring=true;if(initRenderer())buildWorld();restoring=false;renderSpec();setPipeline(5);$s('studioGameStatus').textContent='Proyecto restaurado · pulsa Jugar';addChat('Recuperé tu último proyecto y tu avance local. Puedes continuar editándolo.','ai');return true;
+  }
+  function bind(){
+    addEventListener('beforeunload',persistRun);
+    $s('studioSave').addEventListener('click',saveToFolder);
+    $s('studioRestore').addEventListener('click',restoreProject);
+    $s('studioImport').addEventListener('click',importProject);
+    ['keydown','keyup'].forEach(type=>addEventListener(type,e=>{const studioActive=$s('view-studio')?.classList.contains('active');const typing=/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'');if(!studioActive||typing)return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','shift',' '].includes(k)){e.preventDefault();keys[k===' '?'space':k]=type==='keydown';}}));
+    $$('[data-touch]').forEach(btn=>{const control=btn.dataset.touch;const set=e=>{e.preventDefault();keys[control]=true;btn.classList.add('pressed');};const clear=e=>{e.preventDefault();keys[control]=false;btn.classList.remove('pressed');};btn.addEventListener('pointerdown',set);btn.addEventListener('pointerup',clear);btn.addEventListener('pointercancel',clear);btn.addEventListener('pointerleave',clear);});
+    $s('studioGenerate').addEventListener('click',()=>generate(false));$s('studioRegenerate').addEventListener('click',()=>generate(true));$s('studioPlay').addEventListener('click',()=>{if(!spec){generate(false);return;}running=!running;$s('studioPlay').textContent=running?'Ⅱ Pausar':'▶ Jugar';$s('studioGameStatus').textContent=running?'Partida en curso':'Juego pausado';});$s('studioEdit').addEventListener('click',()=>{$s('studioChatInput').focus();toast('Dile a Mind Glow qué quieres editar');});$s('studioSave').addEventListener('click',()=>{if(!spec){toast('Genera un mundo antes de guardarlo');return;}localStorage.setItem('mindGlowStudio',JSON.stringify(spec));toast('Proyecto guardado en este dispositivo');});$s('studioShare').addEventListener('click',async()=>{if(!spec){toast('Genera un mundo antes de compartirlo');return;}const link=location.href.split('#')[0]+'#studio='+encodeURIComponent(spec.prompt);try{await navigator.clipboard.writeText(link);toast('Enlace del proyecto copiado');}catch(e){prompt('Copia este enlace para compartir tu juego:',link);}});$$('[data-studio-example]').forEach(b=>b.addEventListener('click',()=>{$s('studioPrompt').value=b.dataset.studioExample;$s('studioGenerate').click();}));$s('studioChatForm').addEventListener('submit',e=>{e.preventDefault();const input=$s('studioChatInput'),text=input.value.trim();if(!text)return;addChat(text,'user');input.value='';setTimeout(()=>modify(text),180);});
+  }
+  function init(){bind();const hash=location.hash.match(/^#studio=(.*)$/);if(hash){try{state.studioDraft=decodeURIComponent(hash[1]);$s('studioPrompt').value=state.studioDraft;}catch(e){}}}
+  return { init, resize, restore:restoreProject, saveRun:persistRun };
+})();
+
 /* ---------- ARCADE: nucleo ---------- */
 let difficulty = 'easy';
 let game = { name:'', active:false, cleanup:null, paused:false };
 const games = {
   'Keyboard'    : { icon:'🎹', desc:'Teclas relajantes que se escuchan y se sienten.',              start:gKeyboard },
   'Focus Tap'   : { icon:'🎯', desc:'Objetivos rápidos con racha de aciertos.',                    start:gFocusTap },
+  'Glow Duel'   : { icon:'⚡', desc:'Compite contra Capi: gana quien reaccione más rápido.',         start:gGlowDuel },
   'Memory Glow' : { icon:'🧠', desc:'Memoriza la secuencia que crece ronda a ronda.',              start:gMemory },
   'Food Catch'  : { icon:'🍎', desc:'Atrapa la comida que cae… ¡si atrapas una lata, pierdes!',   start:gFoodCatch },
   'Glow Canvas' : { icon:'🪐', desc:'Dibuja patrones relajantes sin presión.',                     start:gCanvas },
   'Secret Run'  : { icon:'👾', desc:'Guía al personaje con mouse o dedo y esquiva hasta la meta.', start:gSecretRun }
 };
+function gGlowDuel(){
+  const aiDelay={easy:1150,normal:850,hard:620}[difficulty]; let you=0, capi=0, round=0, aiTimer;
+  const body=shell('<div class="duel-score"><div>🧑‍🚀 Tú <b id="youScore">0</b></div><div class="duel-vs">VS</div><div>🦫 Capi <b id="capiScore">0</b></div></div><div class="game-board duel-board" id="duelBoard"><button class="duel-target" id="duelTarget">¡LISTO!</button></div><p class="game-message" id="duelMsg">Pulsa el objetivo cuando aparezca. Capi también juega.</p>');
+  const board=body.querySelector('#duelBoard'), target=body.querySelector('#duelTarget'), msg=body.querySelector('#duelMsg');
+  const next=()=>{ if(!game.active)return; round++; target.textContent='⚡'; target.style.left=(10+Math.random()*75)+'%'; target.style.top=(10+Math.random()*68)+'%'; target.classList.add('duel-live'); setTimeout(()=>target.classList.remove('duel-live'),500); };
+  target.addEventListener('pointerdown',()=>{if(!game.active||game.paused||!target.classList.contains('duel-live'))return;you++; target.classList.remove('duel-live'); body.querySelector('#youScore').textContent=you; sfx('good'); msg.textContent='¡Punto para ti!'; if(you>=7){clearInterval(aiTimer);finishGame(you*10,45,'Ganaste el duelo contra Capi 🏆');}else setTimeout(next,240);});
+  aiTimer=setInterval(()=>{if(game.paused||!game.active)return;capi++;body.querySelector('#capiScore').textContent=capi; if(capi>=7){clearInterval(aiTimer);finishGame(you*10,10,'Capi ganó esta ronda. ¡Reintenta y supéralo!');}},aiDelay);
+  next(); game.cleanup=()=>clearInterval(aiTimer);
+}
 function arcadeInit(){
   renderGames();
   $('#difficulty').addEventListener('click', e => {
@@ -2183,6 +2329,7 @@ function init(){
   topbarInit();
   moodInit();
   aiInit();
+  Studio.init();
   breathInit();
   ambientButtons();
   musicInit();

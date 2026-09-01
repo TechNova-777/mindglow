@@ -30,6 +30,7 @@
     <span class="float-emoji" style="bottom:24%;right:13%;animation-delay:1.8s">🎮</span>
     <span class="float-emoji" style="top:8%;left:52%;animation-delay:2.4s">✨</span>
     <div class="welcome-card glass">
+      <img class="welcome-logo" src="mindglow-logo.png" alt="Logo Mind Glow">
       <div class="brand-badge">✦</div>
       <p class="eyebrow">MIND GLOW 3.0 · IMPULSO MENTAL</p>
       <h1>Tu mente también<br><span>merece una experiencia.</span></h1>
@@ -41,6 +42,7 @@
 
   <!-- ============ APP ============ -->
   <div id="app" class="app hidden">
+    <button class="companion-fab" id="companionFab" data-view="ai" aria-label="Hablar con Capi"><span class="companion-face">🦫</span><span class="companion-copy"><b>Capi</b><small>¿Te guío?</small></span><span class="companion-pulse"></span></button>
     <aside id="sidebar" class="sidebar glass">
       <div class="sidebar-head">
         <button class="brand-mini" data-view="home" aria-label="Inicio">✦</button>
@@ -74,6 +76,28 @@
 
       <div class="content">
 
+        <!-- ===== GAME STUDIO 3D ===== -->
+        <section class="view" id="view-studio">
+          <div class="page-title studio-heading"><div><p class="eyebrow">MIND GLOW GAME AI · CREATOR LAB</p><h1>De idea a mundo <span>jugable.</span></h1><p>Describe tu juego en lenguaje natural. El motor local interpreta la idea, monta la escena 3D y la ejecuta aquí mismo.</p></div><div class="studio-live-chip"><i></i> MOTOR 3D LOCAL</div></div>
+          <div class="studio-layout">
+            <aside class="studio-sidebar">
+              <div class="glass studio-panel prompt-panel">
+                <div class="panel-label">1 · DESCRIBE TU JUEGO</div>
+                <textarea id="studioPrompt" class="studio-prompt" rows="5">Crea un juego 3D de carreras en una ciudad futurista, con autos, obstáculos, monedas, nitro y una meta.</textarea>
+                <button class="btn primary studio-generate" id="studioGenerate">✦ Generar mundo 3D</button>
+                <div class="studio-examples"><small>PRUEBA UNA IDEA</small><button type="button" data-studio-example="Haz un juego de plataformas 3D en una isla flotante con monedas y doble salto.">Plataformas</button><button type="button" data-studio-example="Crea una aventura de supervivencia en una isla con enemigos y un jefe final.">Supervivencia</button><button type="button" data-studio-example="Haz un juego de terror en una escuela abandonada con lluvia.">Terror</button></div>
+              </div>
+              <div class="glass studio-panel pipeline-panel"><div class="panel-label">2 · PIPELINE DE CREACIÓN</div><ol id="studioPipeline" class="studio-pipeline"><li data-step="0">Analizando idea <b>·</b></li><li data-step="1">Diseñando mundo 3D <b>·</b></li><li data-step="2">Creando objetos y físicas <b>·</b></li><li data-step="3">Programando mecánicas <b>·</b></li><li data-step="4">Juego listo <b>·</b></li></ol></div>
+              <div class="glass studio-panel studio-chat-panel"><div class="panel-label">3 · CHAT DE EDICIÓN</div><div id="studioChat" class="studio-chat"><div class="studio-chat-msg ai"><span>✦</span><p>Escribe cambios y los aplico directamente al mundo: “añade 5 enemigos”, “haz el mapa más grande” o “que llueva”.</p></div></div><form id="studioChatForm" class="studio-chat-form"><input id="studioChatInput" placeholder="Modifica tu juego…" autocomplete="off"><button aria-label="Aplicar cambio">↑</button></form></div>
+            </aside>
+            <div class="studio-main glass">
+              <div class="studio-toolbar"><div><span class="studio-status-dot"></span><b id="studioGameTitle">Tu mundo aparecerá aquí</b><small id="studioGameStatus">Listo para crear</small></div><div class="studio-actions"><button type="button" class="btn ghost" id="studioPlay">▶ Jugar</button><button type="button" class="btn ghost" id="studioEdit">✎ Editar</button><button type="button" class="btn ghost" id="studioRegenerate">↻ Regenerar</button><button type="button" class="btn ghost" id="studioRestore">↺ Recuperar</button><button type="button" class="btn ghost" id="studioImport">⇧ Importar</button><button type="button" class="btn ghost" id="studioSave">▣ Guardar carpeta</button><button type="button" class="btn primary" id="studioShare">↗ Compartir</button></div></div>
+              <div class="studio-viewport-wrap"><canvas id="studioViewport"></canvas><div class="studio-crosshair" aria-hidden="true"></div><div class="studio-empty" id="studioEmpty"><div class="studio-empty-icon">◈</div><h2>Tu juego 3D, escrito por ti.</h2><p>Describe una idea y pulsa “Generar mundo 3D”.</p></div><div class="game-hud-3d" id="studioHud"><span>⭐ <b id="studioScore">0</b></span><span>🪙 <b id="studioCoins">0</b></span><span>⚡ <b id="studioNitro">100</b>%</span></div><div class="studio-controls-hint">WASD / FLECHAS · mover <span>ESPACIO · salto</span><b>ARRASTRA para mirar</b></div><div class="studio-touch-controls" aria-label="Controles táctiles"><button type="button" data-touch="up" aria-label="Avanzar">▲</button><div><button type="button" data-touch="left" aria-label="Mover a la izquierda">◀</button><button type="button" data-touch="down" aria-label="Retroceder">▼</button><button type="button" data-touch="right" aria-label="Mover a la derecha">▶</button></div><button type="button" data-touch="space" aria-label="Saltar">⤒</button></div></div>
+              <div class="studio-bottom"><div><span class="panel-label">ESPECIFICACIÓN GENERADA</span><div id="studioSpec" class="spec-chips"><span>Esperando prompt</span></div></div><div class="studio-privacy">🔒 Procesamiento local · guardado automático · sin API key</div></div>
+            </div>
+          </div>
+        </section>
+
         <!-- ===== HOME ===== -->
         <section class="view active" id="view-home">
           <div class="hero glass">
@@ -82,6 +106,7 @@
               <h1>Una app que <span>se siente viva.</span></h1>
               <p class="lead">Mind Glow convierte el bienestar digital en una experiencia: juega, respira, estudia, escucha y habla con Glow AI.</p>
               <div class="hero-actions">
+                <button class="btn primary" data-view="studio">Crear juego 3D</button>
                 <button class="btn primary" data-view="ai">Hablar con Glow AI</button>
                 <button class="btn ghost" data-view="arcade">Explorar Arcade</button>
               </div>
@@ -96,6 +121,7 @@
 
           <div class="section-head"><div><p class="eyebrow">ACCESO RÁPIDO</p><h3>¿Qué necesitas ahora?</h3></div></div>
           <div class="quick-grid">
+            <button class="quick-card studio-quick-card" data-view="studio"><span>◈</span><b>Crear un juego</b><small>Game Studio 3D</small></button>
             <button class="quick-card" data-view="calm"><span>🌿</span><b>Calmarme</b><small>Respiración + sonido</small></button>
             <button class="quick-card" data-view="focus"><span>🎯</span><b>Concentrarme</b><small>Pomodoro flexible</small></button>
             <button class="quick-card" data-view="arcade"><span>🎮</span><b>Despejarme</b><small>Arcade + secretos</small></button>
@@ -149,12 +175,15 @@
                 <div><b>Glow AI 3.0</b><small id="aiStatus">Lista para escucharte</small></div>
                 <span class="online-dot"></span>
               </div>
+              <div class="ai-private-note"><span>🔒</span> Modo local: tus mensajes se procesan en este dispositivo. No necesita API key.</div>
               <div id="chatMessages" class="chat"></div>
               <div class="ai-actions">
                 <button data-prompt="Estoy estresado por las tareas">Estrés</button>
                 <button data-prompt="No puedo concentrarme">Concentración</button>
                 <button data-prompt="Quiero relajarme">Calma</button>
                 <button data-prompt="Necesito organizarme">Organizarme</button>
+                <button data-prompt="Dame un plan de estudio de 25 minutos">Plan rápido</button>
+                <button data-prompt="Cuanto es (24+16)*3">Calculadora</button>
               </div>
               <form id="chatForm" class="chat-form">
                 <input id="chatInput" autocomplete="off" placeholder="Cuéntame qué necesitas...">
@@ -389,6 +418,8 @@
             </div>
           </div>
 
+          <div class="school-gallery glass"><div class="school-gallery-copy"><p class="eyebrow">HECHO POR ESTUDIANTES</p><h2>Una idea que crece en equipo.</h2><p>Mind Glow nace de nuestra comunidad: creatividad, bienestar y tecnología para acompañarnos todos los días.</p><button class="btn primary" data-view="ai">Conocer a Capi →</button></div><img src="mindglow-team.png" alt="Equipo estudiantil de Mind Glow"></div>
+
           <div class="school-facts-grid">
             <article class="glass panel school-fact"><div class="fact-icon">🏫</div><div class="panel-label">INSTITUCIÓN</div><h3>Una comunidad educativa técnica</h3><p>La institución cuenta con primaria y secundaria técnica, junto con talleres de producción y servicio, biblioteca, laboratorio, espacios deportivos y un Aula de Innovación Pedagógica equipada con tecnología.</p></article>
             <article class="glass panel school-fact"><div class="fact-icon">💡</div><div class="panel-label">INNOVACIÓN</div><h3>Google Workspace for Education</h3><p>La institución impulsa el uso educativo de Google Workspace for Education Fundamentals para fortalecer las competencias digitales y la colaboración entre docentes, estudiantes y familias.</p></article>
@@ -610,6 +641,7 @@
   <div id="toast" class="toast" role="status"></div>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
