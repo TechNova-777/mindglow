@@ -13,6 +13,10 @@ const DONATE_KOFI      = '';            // ← opcional: enlace tipo https://ko-
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const KEY = 'mindGlow3';
+const USERS_KEY = 'mindGlowUsers3';
+const ACTIVE_USER_KEY = 'mindGlowActiveUser3';
+const AI_DB_KEY = 'mindGlowKnowledge3';
+const AI_REMOTE_URL = '/api/ai';
 
 function today(){ return new Date().toISOString().slice(0,10); }
 function fmt(s){ if(!Number.isFinite(s)) return '0:00'; return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
@@ -23,7 +27,7 @@ function firstName(){ return (state.user && state.user.name) ? state.user.name.s
 const defaultState = {
   xp:0, level:1, mood:null, calm:0, focus:0, games:0,
   tasks:[], journal:[], sound:true, reduced:false,
-  streak:0, highScores:{}, lastDate:null, aiMemory:[],
+  streak:0, highScores:{}, lastDate:null, aiMemory:[], aiHistory:[], aiUnknown:[], emotionLog:[], aiLastReplies:{},
   user:null,
   pet:{name:'Capi el Capibara', fed:70, energy:70, joy:70, last:null},
   teamImgs:{},
@@ -34,32 +38,192 @@ const defaultState = {
   studioDraft:'',
   studioRun:null
 };
+let activeUserId = null;
 let state = loadState();
 
-function loadState(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(KEY) || '{}');
-    const s = Object.assign({}, defaultState, raw);
-    s.highScores = (s.highScores && typeof s.highScores === 'object') ? s.highScores : {};
-    s.aiMemory   = Array.isArray(s.aiMemory) ? s.aiMemory : [];
-    s.tasks      = Array.isArray(s.tasks) ? s.tasks : [];
-    s.journal    = Array.isArray(s.journal) ? s.journal : [];
-    s.feedback   = Array.isArray(s.feedback) ? s.feedback : [];
-    s.studioProject = (s.studioProject && typeof s.studioProject === 'object') ? s.studioProject : null;
-    s.studioDraft = typeof s.studioDraft === 'string' ? s.studioDraft : '';
-    s.studioRun = (s.studioRun && typeof s.studioRun === 'object') ? s.studioRun : null;
-    s.wellnessLog= Array.isArray(s.wellnessLog) ? s.wellnessLog : [];
-    s.teamImgs   = (s.teamImgs && typeof s.teamImgs==='object') ? s.teamImgs : {};
-    if(!s.pet || typeof s.pet!=='object')
-      s.pet = {name:'Capi el Capibara', fed:70, energy:70, joy:70, last:null};
-    s.team       = Array.isArray(s.team) ? s.team : [];
-    if(!s.team.length || s.team.some(m => m.role) ||
-       (s.team.length===1 && s.team[0].name==='Jack'))
-      s.team = [{name:'JACK'},{name:'CAMILA'},{name:'CLARA'},{name:'ANDREA'},{name:'EDISON'}];
-    return s;
-  }catch(e){ return JSON.parse(JSON.stringify(defaultState)); }
+function cloneDefault(){ return JSON.parse(JSON.stringify(defaultState)); }
+function readJSON(key, fallback){
+  try{ return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch(e){ return fallback; }
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){ console.warn('No se pudo guardar el progreso local', e); } updateUI(); }
+function normalText(s){
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+function profileId(u){
+  const email = normalText(u && u.email).trim();
+  if(email) return 'google:' + email;
+  const name = normalText(u && u.name).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  return name ? 'manual:' + name : 'guest:local';
+}
+function normalizeState(raw){
+  const s = Object.assign(cloneDefault(), raw || {});
+  s.highScores = (s.highScores && typeof s.highScores === 'object') ? s.highScores : {};
+  s.aiMemory   = Array.isArray(s.aiMemory) ? s.aiMemory : [];
+  s.aiHistory  = Array.isArray(s.aiHistory) ? s.aiHistory : [];
+  s.aiUnknown  = Array.isArray(s.aiUnknown) ? s.aiUnknown : [];
+  s.emotionLog = Array.isArray(s.emotionLog) ? s.emotionLog : [];
+  s.aiLastReplies = (s.aiLastReplies && typeof s.aiLastReplies === 'object') ? s.aiLastReplies : {};
+  s.tasks      = Array.isArray(s.tasks) ? s.tasks : [];
+  s.journal    = Array.isArray(s.journal) ? s.journal : [];
+  s.feedback   = Array.isArray(s.feedback) ? s.feedback : [];
+  s.studioProject = (s.studioProject && typeof s.studioProject === 'object') ? s.studioProject : null;
+  s.studioDraft = typeof s.studioDraft === 'string' ? s.studioDraft : '';
+  s.studioRun = (s.studioRun && typeof s.studioRun === 'object') ? s.studioRun : null;
+  s.wellnessLog= Array.isArray(s.wellnessLog) ? s.wellnessLog : [];
+  s.teamImgs   = (s.teamImgs && typeof s.teamImgs==='object') ? s.teamImgs : {};
+  if(!s.pet || typeof s.pet!=='object')
+    s.pet = {name:'Capi el Capibara', fed:70, energy:70, joy:70, last:null};
+  s.team       = Array.isArray(s.team) ? s.team : [];
+  if(!s.team.length || s.team.some(m => m.role) ||
+     (s.team.length===1 && s.team[0].name==='Jack'))
+    s.team = [{name:'JACK'},{name:'CAMILA'},{name:'CLARA'},{name:'ANDREA'},{name:'EDISON'}];
+  return s;
+}
+function readProfiles(){
+  const profiles = readJSON(USERS_KEY, {});
+  return profiles && typeof profiles === 'object' && !Array.isArray(profiles) ? profiles : {};
+}
+function loadState(){
+  let profiles = readProfiles();
+  /* Migrate the original single-profile storage without losing progress. */
+  if(!Object.keys(profiles).length){
+    const legacy = readJSON(KEY, null);
+    if(legacy && typeof legacy === 'object' && Object.keys(legacy).length){
+      const id = profileId(legacy.user);
+      profiles[id] = normalizeState(legacy);
+      try{ localStorage.setItem(USERS_KEY, JSON.stringify(profiles)); }catch(e){}
+    }
+  }
+  activeUserId = localStorage.getItem(ACTIVE_USER_KEY) || Object.keys(profiles)[0] || 'guest:local';
+  if(!profiles[activeUserId]) profiles[activeUserId] = cloneDefault();
+  try{
+    localStorage.setItem(ACTIVE_USER_KEY, activeUserId);
+    localStorage.setItem(USERS_KEY, JSON.stringify(profiles));
+  }catch(e){}
+  return normalizeState(profiles[activeUserId]);
+}
+function persistCurrent(){
+  if(!activeUserId) activeUserId = profileId(state && state.user);
+  const profiles = readProfiles();
+  profiles[activeUserId] = normalizeState(state);
+  try{
+    localStorage.setItem(USERS_KEY, JSON.stringify(profiles));
+    localStorage.setItem(ACTIVE_USER_KEY, activeUserId);
+  }catch(e){ console.warn('No se pudo guardar los perfiles locales', e); }
+}
+function save(){
+  try{ persistCurrent(); localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch(e){ console.warn('No se pudo guardar el progreso local', e); }
+  updateUI();
+}
+function switchProfile(u){
+  persistCurrent();
+  activeUserId = profileId(u);
+  const profiles = readProfiles();
+  state = normalizeState(profiles[activeUserId] || {user:u});
+  state.user = u;
+  save();
+  renderUser();
+  authInit();
+  if(window.refreshGlowAI) window.refreshGlowAI();
+  sfx('good');
+  toast('👋 ¡Hola, '+firstName()+'!');
+}
+
+/* Respuestas variables: evita que el asistente repita la misma frase seguida. */
+function pickFresh(key, options){
+  const list = Array.isArray(options) ? options.filter(Boolean) : [];
+  if(!list.length) return '';
+  const previous = state && state.aiLastReplies ? state.aiLastReplies[key] : -1;
+  const previousIndex = Number.isInteger(previous) ? previous : list.indexOf(previous);
+  const candidates = list.length > 1 ? list.map((item,index) => index).filter(index => index !== previousIndex) : [0];
+  const resultIndex = candidates[Math.floor(Math.random()*candidates.length)];
+  const result = list[resultIndex];
+  if(state){
+    state.aiLastReplies = state.aiLastReplies || {};
+    state.aiLastReplies[key] = resultIndex;
+  }
+  return result;
+}
+
+/* ---------- Comprensión emocional segura ----------
+   Detecta señales expresadas por la persona; no diagnostica ni etiqueta.
+   La respuesta siempre usa lenguaje tentativo: “parece” y “puedo equivocarme”. */
+const EMOTION_PROFILES = [
+  {id:'anxiety',label:'ansiedad o preocupación',patterns:[/ansiedad|ansios|preocup|nervios|me supera|no puedo respirar|palpit|intranquil/],prompt:'Podemos bajar un punto el ritmo y mirar solo el siguiente minuto.'},
+  {id:'sadness',label:'tristeza',patterns:[/triste|deprim|llorar|vacio|sin ganas|desanim|me siento mal|dolor emocional/],prompt:'No voy a minimizar lo que sientes; merece espacio y apoyo.'},
+  {id:'anger',label:'enojo o rabia',patterns:[/enoj|rabia|furia|molest|harto|odio|impotent|irritad/],prompt:'Tiene sentido necesitar una pausa antes de responder o decidir algo.'},
+  {id:'fear',label:'miedo',patterns:[/miedo|asusta|aterror|temor|panico|peligro|me da miedo/],prompt:'Primero busquemos seguridad y una persona con quien no tengas que enfrentarlo solo.'},
+  {id:'loneliness',label:'soledad',patterns:[/me siento solo|me siento sola|nadie me entiende|nadie esta|aislad|sin amigos|no tengo a nadie/],prompt:'Sentirte desconectado puede doler mucho; mereces compañía y apoyo real.'},
+  {id:'shame',label:'vergüenza o culpa',patterns:[/verguenza|avergonz|culpable|me culpo|soy un fracaso|me odio a mi/],prompt:'Una emoción intensa no define tu valor como persona.'},
+  {id:'frustration',label:'frustración',patterns:[/frustr|no me sale|no puedo hacerlo|decepcion|me rindo|harto de intentar/],prompt:'Podemos separar el problema en una parte pequeña y manejable.'},
+  {id:'overwhelm',label:'agobio o agotamiento',patterns:[/agob|abrum|demasiado|colaps|no doy mas|agotad|cansad|presion|sobrecarg/],prompt:'Cuando todo pesa, no hace falta resolverlo todo a la vez.'},
+  {id:'confusion',label:'confusión',patterns:[/confund|perdid|no entiendo|no se que hacer|no se como|desorient/],prompt:'Podemos ordenar lo que pasa sin apresurarnos a encontrar una respuesta perfecta.'},
+  {id:'joy',label:'alegría o ilusión',patterns:[/feliz|alegr|content|emocionad|orgullos|me fue bien|estoy bien|genial/],prompt:'Me alegra leer un poco de luz en lo que cuentas; también merece celebrarse.'},
+  {id:'calm',label:'calma',patterns:[/tranquil|en paz|relajad|sereno|me siento bien/],prompt:'Qué bueno que aparezca algo de calma; podemos cuidar ese espacio.'}
+];
+const CRISIS_PATTERNS = [
+  {rx:/no quiero (seguir )?(vivir|viviendo)|no vale la pena vivir|quitarme la vida|terminar con mi vida/,level:'high'},
+  {rx:/\b(me )?quiero morir\b(?! de risa| de sueno| de cansancio)/,level:'high'},
+  {rx:/me quiero (matar|suicidar)|quiero (matarme|suicidarme)|hacerme dano|hacerme daño|autolesion|autolesionarme|cortarme|lastimarme/,level:'high'},
+  {rx:/tengo un plan para|lo voy a hacer ahora|ya me hice dano|ya me hice daño|ya tome pastillas|ya tomé pastillas|matar a alguien|hacerle dano a alguien|hacerle daño a alguien/,level:'urgent'},
+  {rx:/formas de suicidio|formas de matarme|como suicidarme|cómo suicidarme|como hacerme dano|cómo hacerme daño/,level:'high'}
+];
+const MEDICAL_EMERGENCY_PATTERN = /no puedo respirar|me falta el aire|dolor fuerte en el pecho|me desmaye|me desmay[eé]|perdi el conocimiento|perdí el conocimiento|sangrado abundante|convulsion|convulsión/;
+function detectEmotion(input){
+  const s = normalText(input).trim();
+  if(!s) return null;
+  if(MEDICAL_EMERGENCY_PATTERN.test(s)) return {id:'emergency',level:'urgent',confidence:.99};
+  const abstractQuestion = /^(que es|que significa|como funciona|dime que es|puedes explicar|quiero saber que es|quiero saber sobre|hablame de|informacion sobre)\b/.test(s);
+  const personalEmotion = /\b(me siento|estoy|ando|tengo|quiero|necesito|no puedo|me da|me preocupa|me duele|soy)\b/.test(s) && !abstractQuestion;
+  const question = /\?|^(que|como|por que|porque|cuando|cual|puedes|dime|explica)\b/.test(s);
+  for(const risk of CRISIS_PATTERNS){
+    if(risk.rx.test(s) && !(/de risa|de sueno|de sueño|de cansancio/.test(s) && risk.level !== 'urgent'))
+      return {id:'crisis',level:risk.level,confidence:.99};
+  }
+  if(abstractQuestion || (question && !personalEmotion)) return null;
+  const activePattern = rx => {
+    const match = rx.exec(s);
+    if(!match) return false;
+    const prefix = s.slice(Math.max(0,match.index-28),match.index);
+    return !/\b(?:no|nunca|ya no)\s+(?:estoy|me siento|tengo|ando|soy|puedo)?\s*$/.test(prefix);
+  };
+  const ranked = EMOTION_PROFILES.map(profile => ({profile,score:profile.patterns.reduce((n,rx) => n+(activePattern(rx)?1:0),0)}))
+    .filter(hit => hit.score > 0).sort((a,b) => b.score-a.score);
+  if(!ranked.length) return null;
+  const best = ranked[0];
+  const intensity = /muy|mucho|demasiado|super|no puedo|me supera|todo el tiempo|cada dia|cada día|!!!/.test(s) ? 3 : (best.score > 1 ? 2 : 1);
+  return {id:best.profile.id,label:best.profile.label,prompt:best.profile.prompt,intensity,confidence:Math.min(.94,.58+best.score*.1)};
+}
+function mentalHealthReply(signal){
+  if(signal.id === 'emergency'){
+    return {
+      reply:'Esto puede ser una emergencia física. No puedo evaluarte por chat: avisa ahora a un adulto o persona cercana y llama al número local de emergencias, o ve a urgencias. Si estás en Perú, usa los servicios de emergencia disponibles en tu zona. No te quedes a solas.',
+      actions:[],sources:[]
+    };
+  }
+  if(signal.id === 'crisis'){
+    const urgent = signal.level === 'urgent';
+    return {
+      reply:(urgent ? 'Gracias por decírmelo. Esto necesita ayuda humana inmediata. ' : 'Gracias por contármelo; no tienes que cargarlo en silencio. ')+
+        '¿Estás en peligro ahora mismo o tienes la intención de hacerte daño o hacer daño a alguien? '+
+        'Si la respuesta es sí, aléjate de cualquier objeto o sustancia con la que puedas lastimarte, no te quedes a solas y avisa ahora a un adulto o persona de confianza. '+
+        'Si estás en Perú, llama gratis a la Línea 113, opción 5, que brinda orientación psicológica las 24 horas; si el peligro es inmediato, contacta los servicios de emergencia o ve a urgencias. Si estás en otro país, usa el número local de emergencias.',
+      actions:[['Llamar a la Línea 113','tel:113']],sources:[{title:'MINSA Perú · Línea 113, opción 5',url:'https://www.gob.pe/institucion/minsa/pages/10942-solicitar-atencion-en-centros-de-salud-mental-comunitaria-en-el-peru'}]
+    };
+  }
+  const level = signal.intensity === 3 ? ' especialmente intenso' : '';
+  const opening = pickFresh('emotion-opening:'+signal.id, ['Parece que estás sintiendo ', 'Por lo que cuentas, aparece ', 'Leo en tus palabras ']);
+  const question = signal.id === 'joy' || signal.id === 'calm'
+    ? pickFresh('emotion-question:'+signal.id, ['¿Qué te ayudó a sentirte así?', '¿Quieres guardar este momento en tu Diario?', '¿Qué te gustaría cuidar para que dure un poco más?'])
+    : pickFresh('emotion-question:'+signal.id, ['¿Quieres desahogarte o prefieres que pensemos en un paso pequeño?', '¿Qué fue lo más difícil de este momento?', '¿Prefieres que te escuche o que busquemos una idea práctica?']);
+  return {
+    reply:opening+signal.label+level+'. Puedo equivocarme, pero te estoy escuchando. '+signal.prompt+' '+question,
+    actions:signal.id === 'anxiety' || signal.id === 'fear' ? [['Respirar ahora','calm']] : [['Escribirlo en Diario','journal']],
+    sources:[]
+  };
+}
+window.GlowAIMentalHealth = {detect:detectEmotion, reply:mentalHealthReply};
 
 /* ---------- Audio base ---------- */
 let actx = null;
@@ -114,14 +278,14 @@ function ensureStreak(){
 }
 
 /* ---------- Navegación ---------- */
-const NAV = [['home','⌂','Inicio'],['studio','◈','Game Studio'],['ai','✦','Glow AI'],['calm','◌','Calma'],
-  ['wellness','💚','Bienestar+'],['arcade','⌁','Arcade'],['focus','◷','Focus'],
-  ['tasks','✓','Tareas'],['journal','▱','Diario'],['chat','💬','Sala Glow'],
-  ['school','🏫','Mi colegio'],['space','✧','Glow Space'],['profile','○','Perfil']];
+const NAV = [['home','✦','Mi Glow'],['studio','◈','Glow Forge'],['ai','✧','Glow AI'],['calm','☾','Zen Calma'],
+  ['wellness','♥','Balance+'],['arcade','⚡','Arcade Rush'],['focus','◎','Deep Focus'],
+  ['tasks','✓','Misiones'],['journal','✎','Bitácora'],['chat','☁','Comunidad Glow'],
+  ['school','⌂','Mi Cole'],['space','✦','Universo Glow'],['profile','◉','Mi Perfil']];
 
 function buildNav(){
   $('#navList').innerHTML = NAV.map(n =>
-    '<button class="nav-item" data-view="'+n[0]+'"><span>'+n[1]+'</span><b>'+n[2]+'</b></button>').join('');
+    '<button class="nav-item" data-view="'+n[0]+'" aria-label="'+n[2]+'"><span class="nav-logo nav-logo-'+n[0]+'" aria-hidden="true">'+n[1]+'</span><b>'+n[2]+'</b></button>').join('');
 }
 function showView(v){
   if(v !== 'studio' && document.body.classList.contains('studio-open')) Studio.saveRun();
@@ -129,8 +293,11 @@ function showView(v){
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === v));
   document.body.classList.toggle('studio-open', v === 'studio');
   const labels = {}; NAV.forEach(n => labels[n[0]] = n[2]);
-  labels.settings = 'Configuración';
-  $('#pageTitle').textContent  = labels[v] || 'Mind Glow';
+  labels.settings = 'Ajustes';
+  const navItem = NAV.find(n => n[0] === v);
+  $('#pageTitle').innerHTML = navItem
+    ? '<span class="page-title-logo page-title-logo-'+navItem[0]+'" aria-hidden="true">'+navItem[1]+'</span>'+esc(navItem[2])
+    : '<span class="page-title-logo page-title-logo-settings" aria-hidden="true">⚙</span>Configuración';
   $('#pageKicker').textContent = 'MIND GLOW 3.0 · ' + (labels[v]||'').toUpperCase();
   if(v === 'tasks')   renderTasks();
   if(v === 'journal') renderJournal();
@@ -203,8 +370,11 @@ function authInit(){
   const area = $('#authArea'); if(!area) return;
   area.innerHTML = '';
   if(state.user && state.user.name){
-    area.innerHTML = '<button class="btn ghost" id="signOutBtn">Cerrar sesión</button>';
+    const profileCount = Object.keys(readProfiles()).filter(id => id !== 'guest:local').length;
+    area.innerHTML = '<p class="auth-hint">Perfil activo: <b>'+esc(state.user.name)+'</b> · '+profileCount+' perfil(es) guardado(s) en este navegador.</p>'+
+      '<button class="btn ghost" id="switchUserBtn">Cambiar de usuario</button> <button class="btn ghost" id="signOutBtn">Cerrar sesión</button>';
     $('#signOutBtn').addEventListener('click', signOut);
+    $('#switchUserBtn').addEventListener('click', signOut);
     return;
   }
   const manual =
@@ -243,12 +413,18 @@ function onGoogleCredential(res){
   }catch(e){ toast('No se pudo leer la cuenta de Google'); }
 }
 function setUser(u){
-  state.user = u; save(); renderUser(); authInit();
-  sfx('good'); toast('👋 ¡Hola, '+firstName()+'!');
+  switchProfile(u);
 }
 function signOut(){
   try{ if(window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); }catch(e){}
-  state.user = null; save(); renderUser(); authInit(); toast('Sesión cerrada');
+  persistCurrent();
+  activeUserId = 'guest:local';
+  const profiles = readProfiles();
+  state = normalizeState(profiles[activeUserId] || {});
+  state.user = null;
+  save(); renderUser(); authInit();
+  if(window.refreshGlowAI) window.refreshGlowAI();
+  toast('Sesión cerrada');
 }
 
 /* ---------- Home: check-in de ánimo ---------- */
@@ -274,10 +450,216 @@ function moodInit(){
   });
 }
 
+/* ---------- Base de conocimiento local ----------
+   Las fichas son datos estructurados, no respuestas sueltas. Se pueden ampliar
+   sin tocar el motor: cada ficha tiene tema, palabras clave y una explicación.
+   La copia local permite que la IA siga funcionando sin API ni conexión. */
+const MENTAL_HEALTH_SOURCES = [
+  {title:'MINSA Perú · atención en salud mental',url:'https://www.gob.pe/institucion/minsa/pages/10942-solicitar-atencion-en-centros-de-salud-mental-comunitaria-en-el-peru'},
+  {title:'OMS · autocuidado para la salud y el bienestar',url:'https://www.who.int/news-room/questions-and-answers/item/self-care-for-health-and-well-being'},
+  {title:'OMS · prevención del suicidio',url:'https://www.who.int/news-room/questions-and-answers/item/suicide'},
+  {title:'NIMH · cuándo buscar ayuda',url:'https://www.nimh.nih.gov/health/publications/my-mental-health-do-i-need-help'}
+];
+const KNOWLEDGE_SEED = [
+  {id:'wellness-healthy-habits',category:'bienestar',title:'Cinco hábitos saludables',keywords:['habitos saludables','5 habitos saludables','cinco habitos saludables','rutina saludable','bienestar diario','cuidar mi salud mental'],answer:'Cinco hábitos que pueden cuidar tu bienestar son: 1) dormir y levantarte en horarios parecidos; 2) comer y tomar agua con regularidad; 3) moverte un poco cada día; 4) hacer pausas de pantalla y respirar cuando notes tensión; y 5) hablar con alguien de confianza cuando algo te pese. No tienes que cumplirlos perfectamente: empieza por uno pequeño y sostenible.',actions:[['Ir a Calma','calm'],['Abrir Diario','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'study-active-recall',category:'estudio',title:'Repaso activo',keywords:['repaso activo','recordar','memorizar','como estudio','estudiar mejor'],answer:'El repaso activo consiste en cerrar el cuaderno y recuperar la información de memoria: hazte preguntas, explica el tema en voz alta o resuelve un ejercicio sin mirar. Luego revisa tus errores. Es más útil que releer muchas veces.',actions:[['Iniciar Focus','focus']]},
+  {id:'study-spaced-repetition',category:'estudio',title:'Repetición espaciada',keywords:['repeticion espaciada','tarjetas','flashcards','cuando repasar'],answer:'Reparte los repasos: hoy, mañana, en tres días y una semana después. Si recuerdas una tarjeta, aumenta el intervalo; si fallas, vuelve a verla pronto. Así fortaleces la memoria sin estudiar todo la noche.',actions:[['Añadir plan a Tareas','tasks']]},
+  {id:'study-pomodoro',category:'estudio',title:'Método Pomodoro',keywords:['pomodoro','bloques de estudio','25 minutos','organizar estudio'],answer:'Elige un resultado concreto, trabaja 25 minutos sin notificaciones y descansa 5. Después de cuatro bloques, toma 15–30 minutos. Si 25 minutos te resulta mucho, empieza con 10: la constancia importa más que el número exacto.',actions:[['Abrir Focus','focus']]},
+  {id:'study-summary',category:'estudio',title:'Cómo hacer un resumen',keywords:['hacer resumen','resumir','resumen escolar','ideas principales'],answer:'Lee para entender, no para copiar. Después escribe el tema en una frase, selecciona 3–5 ideas principales y conecta cada una con un ejemplo. Finalmente elimina repeticiones y comprueba que alguien pueda entenderlo sin el texto original.',actions:[['Abrir Diario','journal']]},
+  {id:'study-concept-map',category:'estudio',title:'Mapa conceptual',keywords:['mapa conceptual','mapa mental','organizar conceptos','conectar ideas'],answer:'Pon el concepto central en el medio, agrupa las ideas relacionadas y une los grupos con flechas y palabras de enlace como “causa”, “incluye” o “se transforma en”. Si no puedes explicar una flecha, falta comprender esa relación.',actions:[['Crear una tarea','tasks']]},
+  {id:'study-exam',category:'estudio',title:'Preparar un examen',keywords:['preparar examen','examen','prueba','evaluacion','antes del examen'],answer:'Haz una lista de temas, ordénalos por dificultad y practica con preguntas sin mirar apuntes. Corrige con una lista de errores. El día anterior prepara materiales y duerme; una maratón nocturna suele empeorar la atención.',actions:[['Modo Focus','focus'],['Anotar dudas','journal']]},
+  {id:'study-math-fraction',category:'estudio',title:'Sumar fracciones',keywords:['sumar fracciones','restar fracciones','fracciones'],answer:'Con el mismo denominador, suma o resta los numeradores y conserva el denominador. Con denominadores distintos, busca un múltiplo común, convierte las fracciones equivalentes y simplifica el resultado.',actions:[]},
+  {id:'study-algebra',category:'estudio',title:'Resolver una ecuación',keywords:['resolver ecuacion','ecuaciones','despejar x','algebra'],answer:'Haz la misma operación en ambos lados. Primero elimina sumas o restas; después multiplicaciones o divisiones. Al final sustituye tu resultado en la ecuación original para comprobarlo.',actions:[]},
+  {id:'study-photosynthesis',category:'ciencia',title:'Fotosíntesis',keywords:['fotosintesis','plantas','clorofila','como comen las plantas'],answer:'La fotosíntesis es el proceso por el que las plantas usan luz, agua y dióxido de carbono para producir glucosa y liberar oxígeno. Ocurre principalmente en los cloroplastos, donde la clorofila captura la energía de la luz.',actions:[]},
+  {id:'study-cell',category:'ciencia',title:'La célula',keywords:['que es una celula','celula animal','celula vegetal','organelos'],answer:'La célula es la unidad básica de los seres vivos. La membrana regula lo que entra y sale, el citoplasma contiene las estructuras internas y el ADN guarda instrucciones. Las células vegetales también tienen pared celular, cloroplastos y una gran vacuola.',actions:[]},
+  {id:'study-newton',category:'ciencia',title:'Segunda ley de Newton',keywords:['segunda ley de newton','fuerza masa aceleracion','newton'],answer:'La segunda ley de Newton se expresa como F = m × a: la fuerza neta sobre un objeto es su masa multiplicada por la aceleración. Si aumentas la fuerza, aumenta la aceleración; si aumentas la masa con la misma fuerza, acelera menos.',actions:[]},
+  {id:'study-scientific-method',category:'ciencia',title:'Método científico',keywords:['metodo cientifico','hipotesis','experimento','ciencia'],answer:'Una investigación suele seguir este ciclo: observar, formular una pregunta, proponer una hipótesis, diseñar un experimento, recoger datos, analizar resultados y comunicar conclusiones. Si los datos contradicen la hipótesis, se revisa: no es un fracaso.',actions:[]},
+  {id:'study-water-cycle',category:'ciencia',title:'Ciclo del agua',keywords:['ciclo del agua','evaporacion','condensacion','precipitacion'],answer:'El calor evapora agua, el vapor asciende y se condensa en nubes; luego cae como precipitación. Parte se infiltra en el suelo y parte escurre hacia ríos y océanos, donde el ciclo vuelve a comenzar.',actions:[]},
+  {id:'study-essay',category:'lengua',title:'Estructura de un ensayo',keywords:['hacer un ensayo','ensayo escolar','introduccion desarrollo conclusion','redactar'],answer:'Una estructura clara es: introducción con contexto y tesis, desarrollo con argumentos y evidencias, y conclusión que retoma la idea principal. Cada párrafo debe defender una sola idea y enlazarse con el siguiente.',actions:[]},
+  {id:'study-english',category:'idiomas',title:'Present simple en inglés',keywords:['present simple','ingles','aprender ingles','do does'],answer:'El present simple habla de hábitos y hechos. Con I/you/we/they usa el verbo base; con he/she/it normalmente añade -s. En preguntas y negaciones usa do/does: “Do you study?” y “She doesn’t study.”',actions:[]},
+  {id:'study-presentation',category:'estudio',title:'Exponer sin bloquearse',keywords:['exposicion','presentacion','hablar en publico','nervios al exponer'],answer:'Prepara tres ideas, no un texto para leer. Ensaya de pie y explica cada idea con un ejemplo. Antes de empezar, exhala más largo de lo que inhalas, mira a una persona amable y habla un poco más lento de lo normal.',actions:[['Respirar ahora','calm']]},
+  {id:'study-procrastination',category:'hábitos',title:'Vencer la procrastinación',keywords:['procrastinacion','procrastinar','no tengo ganas de estudiar','flojera'],answer:'Reduce el inicio: abre el material y trabaja solo cinco minutos en una acción visible. Quita una distracción, deja el celular lejos y decide de antemano qué significa terminar. Empezar pequeño suele desbloquear el siguiente paso.',actions:[['Abrir Focus','focus'],['Ver Tareas','tasks']]},
+  {id:'wellness-breathing',category:'bienestar',title:'Respiración para bajar revoluciones',keywords:['respirar','respiracion','calmarme','ansiedad leve','estres'],answer:'Prueba durante un minuto: inhala suavemente 4 segundos y exhala 6. No fuerces el aire ni aguantes la respiración. Si te mareas, vuelve a respirar normal. La respiración acompaña; no reemplaza ayuda profesional.',actions:[['Ir a Calma','calm']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-grounding',category:'bienestar',title:'Técnica de anclaje 5-4-3-2-1',keywords:['5 4 3 2 1','anclaje','ataque de ansiedad','panic','panico'],answer:'Mira 5 cosas, toca 4, escucha 3, identifica 2 olores y 1 sabor. Describe cada cosa con calma. Si además hay dificultad real para respirar, lesión, peligro o riesgo de hacerte daño, busca ayuda humana inmediata; esta técnica no sustituye una emergencia.',actions:[['Respirar ahora','calm'],['Escribirlo','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-sleep',category:'bienestar',title:'Higiene del sueño',keywords:['dormir mejor','insomnio','no puedo dormir','sueño','rutina de sueño'],answer:'Mantén una hora parecida para levantarte, baja la luz por la noche y evita estudiar o usar el celular en la cama. Si no te duermes, haz algo tranquilo con poca luz y vuelve cuando aparezca sueño. Si dura semanas, cuéntaselo a un adulto y consulta a un profesional.',actions:[['Abrir Calma','calm'],['Escribir en Diario','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-sadness',category:'bienestar',title:'Cuando te sientes triste',keywords:['triste','deprimido','llorar','me siento mal','me siento solo','soledad'],answer:'Lo que sientes merece atención. Ponle nombre, toma agua, haz una pausa y cuéntaselo hoy a alguien seguro. Si la tristeza dura, afecta tu vida o aparecen ideas de hacerte daño, busca a un adulto de confianza o ayuda profesional de inmediato; no tienes que manejarlo solo.',actions:[['Abrir Diario','journal'],['Ir a Calma','calm']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-bullying',category:'bienestar',title:'Qué hacer ante el acoso',keywords:['bullying','acoso escolar','me molestan','me insultan','violencia escolar'],answer:'No es tu culpa y no tienes que enfrentarlo solo. Guarda fechas o mensajes, aléjate si hay riesgo y cuéntaselo a un familiar, docente, tutor o dirección. Pide un plan concreto de protección. Si existe peligro inmediato, busca ayuda de emergencia.',actions:[['Escribir lo ocurrido','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-movement',category:'bienestar',title:'Pausa activa',keywords:['pausa activa','moverme','ejercicio corto','cansancio estudiando'],answer:'Cada 25–50 minutos levántate 2–5 minutos: camina, estira hombros y mira lejos de la pantalla. El movimiento breve puede ayudarte a volver con más energía, sin convertir el descanso en otra obligación.',actions:[['Iniciar Focus','focus']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-digital',category:'bienestar',title:'Descanso digital',keywords:['descanso de pantalla','adiccion al celular','menos celular','redes sociales'],answer:'Define momentos sin notificaciones, deja el teléfono fuera del alcance durante Focus y desactiva alertas que no necesitas. Cambia el impulso por una acción corta: agua, estiramiento, música o una conversación.',actions:[['Abrir Focus','focus']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-posture',category:'bienestar',title:'Postura frente a la pantalla',keywords:['postura','dolor de espalda','dolor de cuello','pantalla'],answer:'Apoya los pies, relaja hombros y coloca la pantalla aproximadamente a la altura de los ojos. Cambia de posición con frecuencia: ninguna postura fija es buena durante horas. Si el dolor persiste o es fuerte, coméntalo con un adulto y un profesional.',actions:[],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-emotions',category:'bienestar',title:'Entender las emociones',keywords:['que es una emocion','emociones','entender lo que siento','nombrar emociones','regular emociones'],answer:'Una emoción es una respuesta que puede incluir sensaciones del cuerpo, pensamientos y ganas de actuar. Nombrarla no la hace desaparecer, pero ayuda a entender qué necesitas. Puedes decir: “siento ___, empezó cuando ___ y ahora necesito ___”.',actions:[['Abrir Diario','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-emotional-regulation',category:'bienestar',title:'Regular una emoción intensa',keywords:['regular una emocion','controlar mis emociones','manejar emociones','me siento desbordado'],answer:'Primero baja la intensidad: aléjate unos minutos de la discusión, exhala lento y nota cinco cosas a tu alrededor. Después nombra la emoción, identifica el disparador y elige una acción segura. Regular no significa negar lo que sientes.',actions:[['Ir a Calma','calm']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-anxiety',category:'bienestar',title:'Ansiedad y preocupación',keywords:['que es la ansiedad','ansiedad constante','preocupacion excesiva','preocupacion','ataque de panico'],answer:'La ansiedad puede sentirse como preocupación, tensión, miedo o señales físicas. No puedo diagnosticarte. Si interfiere con dormir, estudiar, relacionarte o hacer tus actividades, cuéntaselo a un adulto y busca orientación profesional; en Perú puedes llamar a la Línea 113, opción 5.',actions:[['Respirar ahora','calm']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-anger',category:'bienestar',title:'Manejar el enojo',keywords:['manejar el enojo','controlar la rabia','estoy enojado','ira'],answer:'Si notas que podrías lastimar a alguien, aléjate y busca a un adulto. Si hay seguridad, toma una pausa, suelta la mandíbula y escribe qué límite o necesidad hay debajo del enojo. Habla cuando baje la intensidad, sin amenazas ni insultos.',actions:[['Escribirlo en Diario','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-grief',category:'bienestar',title:'Duelo y pérdida',keywords:['duelo','perdi a alguien','perdida de un ser querido','extraño a alguien','muerte de alguien'],answer:'El duelo no tiene un calendario único: puede traer tristeza, enojo, culpa, alivio o confusión. Busca compañía, mantén necesidades básicas y permite hablar de esa persona. Si no puedes funcionar o el dolor se vuelve insoportable, busca apoyo profesional.',actions:[['Abrir Diario','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-self-esteem',category:'bienestar',title:'Autoestima y autocrítica',keywords:['baja autoestima','no valgo','me siento inutil','soy inutil','no soy suficiente'],answer:'Un pensamiento duro sobre ti no es una medida objetiva de tu valor. Cambia “soy un fracaso” por una descripción concreta: “esto me salió mal y necesito ayuda o práctica”. Habla con alguien que te trate con respeto, especialmente si esta voz aparece muy seguido.',actions:[['Escribirlo en Diario','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-support',category:'bienestar',title:'Pedir ayuda',keywords:['como pedir ayuda','necesito ayuda emocional','hablar con alguien','buscar psicologo','ayuda psicologica'],answer:'Puedes empezar con una frase simple: “No me estoy sintiendo bien y necesito que me escuches; ¿podemos hablar hoy?”. Elige un adulto seguro, docente, tutor, familiar o profesional. Pedir ayuda no exagera el problema: abre una puerta de apoyo.',actions:[['Abrir Diario','journal']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-school-stress',category:'bienestar',title:'Estrés escolar',keywords:['estres escolar','estres por tareas','presion escolar','me abruma el colegio','muchas tareas'],answer:'Haz una lista de lo urgente y elige un solo siguiente paso. Divide una tarea grande, pide aclaración al docente y reserva pausas breves. Si el estrés afecta tu sueño, apetito, asistencia o ánimo durante varios días, cuéntaselo a un adulto y busca orientación.',actions:[['Ver Tareas','tasks'],['Abrir Focus','focus']],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-boundaries',category:'bienestar',title:'Límites saludables',keywords:['poner limites','limites personales','decir no','me cuesta decir no','presion de amigos'],answer:'Un límite puede ser claro y breve: “No quiero hacer eso”, “Necesito tiempo” o “No compartas esa información”. No tienes que justificarte interminablemente. Si alguien te amenaza o no respeta tu límite, aléjate y cuéntaselo a un adulto seguro.',actions:[],sources:MENTAL_HEALTH_SOURCES},
+  {id:'wellness-professional-help',category:'bienestar',title:'Cuándo buscar apoyo profesional',keywords:['necesito terapia','debo ir al psicologo','cuando buscar ayuda','salud mental profesional','terapia'],answer:'Busca apoyo profesional si el malestar persiste, empeora o interfiere con dormir, comer, estudiar, relacionarte o cuidarte. En Perú, la Línea 113 opción 5 ofrece orientación psicológica gratuita las 24 horas; también puedes acudir a un establecimiento de salud o Centro de Salud Mental Comunitaria.',actions:[],sources:MENTAL_HEALTH_SOURCES},
+  {id:'general-internet',category:'cultura digital',title:'Qué es internet',keywords:['que es internet','internet','web','red mundial'],answer:'Internet es una red de redes que permite que dispositivos intercambien datos usando reglas comunes, como TCP/IP. La web es uno de sus servicios: usa navegadores, direcciones y enlaces para acceder a páginas.',actions:[]},
+  {id:'general-ai',category:'tecnología',title:'Cómo funciona Glow AI',keywords:['quien eres','eres una ia','como funciona la ia','inteligencia artificial','que es la ia','que es una ia'],answer:'Soy Glow AI: analizo palabras clave, contexto de la conversación y tu perfil local para buscar la ficha más relevante. Para preguntas abiertas puedo consultar un proveedor externo cuando el servidor está configurado. Si no tengo suficiente información, debo decirlo y pedir contexto en lugar de inventar.',actions:[]},
+  {id:'general-password',category:'seguridad',title:'Contraseñas seguras',keywords:['contraseña segura','password','seguridad de cuenta','crear contraseña'],answer:'Usa una frase larga y única para cada cuenta; un gestor de contraseñas puede ayudarte. Activa la verificación en dos pasos y no compartas códigos. Si una contraseña se filtra, cámbiala desde la página oficial.',actions:[]},
+  {id:'general-phishing',category:'seguridad',title:'Detectar phishing',keywords:['phishing','estafa','correo falso','enlace sospechoso','robar cuenta'],answer:'Desconfía de la urgencia, premios inesperados, errores extraños y enlaces que no coinciden con la empresa. No abras ni respondas; entra escribiendo tú mismo la dirección oficial y avisa a un adulto si es una cuenta escolar o familiar.',actions:[]},
+  {id:'general-privacy',category:'seguridad',title:'Privacidad en Mind Glow',keywords:['privacidad','mis datos','datos personales','guardan mis datos'],answer:'El progreso, la memoria y las señales emocionales de Glow AI se guardan localmente en perfiles separados del navegador. No pongas contraseñas, documentos ni información sensible en el chat. Si activas servicios externos, revisa sus propias políticas antes de usarlos.',actions:[]},
+  {id:'general-solar',category:'cultura general',title:'Sistema solar',keywords:['sistema solar','planetas','orden de los planetas'],answer:'Desde el Sol, el orden de los ocho planetas es: Mercurio, Venus, Tierra, Marte, Júpiter, Saturno, Urano y Neptuno. Plutón se clasifica como planeta enano.',actions:[]},
+  {id:'general-light',category:'cultura general',title:'Velocidad de la luz',keywords:['velocidad de la luz','luz','cuanto viaja la luz'],answer:'En el vacío, la luz viaja aproximadamente a 299 792 kilómetros por segundo. Por eso la luz del Sol tarda cerca de 8 minutos y 20 segundos en llegar a la Tierra.',actions:[]},
+  {id:'general-climate',category:'cultura general',title:'Cambio climático',keywords:['cambio climatico','calentamiento global','efecto invernadero'],answer:'El efecto invernadero natural mantiene habitable la Tierra. La actividad humana ha aumentado gases como el dióxido de carbono, atrapando más calor y provocando cambios en temperaturas, lluvias, océanos y ecosistemas.',actions:[]},
+  {id:'geo-peru',category:'geografía',title:'Perú',keywords:['capital de peru','peru','geografia del peru','regiones del peru'],answer:'La capital del Perú es Lima. El país suele describirse en tres grandes regiones geográficas: costa, sierra y selva; también tiene una gran diversidad de climas, ecosistemas y culturas.',actions:[]},
+  {id:'geo-continents',category:'geografía',title:'Continentes',keywords:['continentes','cuantos continentes','america europa asia africa oceania'],answer:'En el modelo escolar más usado en español se reconocen seis continentes: América, Europa, Asia, África, Oceanía y Antártida. Algunos modelos separan América en Norteamérica y Sudamérica y hablan de siete.',actions:[]},
+  {id:'geo-oceans',category:'geografía',title:'Océanos',keywords:['oceanos','mares','cuantos oceanos','oceano pacifico'],answer:'Los cinco océanos reconocidos habitualmente son Pacífico, Atlántico, Índico, Ártico y Antártico. El Pacífico es el más extenso.',actions:[]},
+  {id:'history-don-quixote',category:'literatura',title:'Don Quijote de la Mancha',keywords:['quien escribio don quijote','don quijote','miguel de cervantes','cervantes'],answer:'Don Quijote de la Mancha es una novela de Miguel de Cervantes. Publicó su primera parte en 1605 y la segunda en 1615; la obra juega con la frontera entre los libros de caballería y la realidad.',actions:[]},
+  {id:'history-independence',category:'historia',title:'Independencia del Perú',keywords:['independencia del peru','28 de julio','san martin peru','historia peru'],answer:'La proclamación de la independencia del Perú se realizó el 28 de julio de 1821 en Lima, en un proceso militar y político que continuó hasta la consolidación de la independencia en los años siguientes.',actions:[]},
+  {id:'math-percentage',category:'matemática',title:'Porcentajes',keywords:['porcentaje','calcular porcentaje','aumento porcentual','descuento'],answer:'Para hallar p% de una cantidad, multiplica la cantidad por p y divide entre 100. Para un descuento, resta ese resultado; para un aumento, súmalo. Ejemplo: 20% de 50 es 10.',actions:[]},
+  {id:'math-area',category:'matemática',title:'Áreas básicas',keywords:['area de un cuadrado','area de un rectangulo','area de un triangulo','geometria'],answer:'Rectángulo: base × altura. Cuadrado: lado × lado. Triángulo: (base × altura) ÷ 2. No olvides escribir la unidad al cuadrado, como cm².',actions:[]},
+  {id:'math-pythagoras',category:'matemática',title:'Teorema de Pitágoras',keywords:['teorema de pitagoras','triangulo rectangulo','hipotenusa'],answer:'En un triángulo rectángulo, a² + b² = c², donde c es la hipotenusa, el lado opuesto al ángulo recto. Para encontrar un lado, despeja y calcula la raíz cuadrada.',actions:[]},
+  {id:'coding-html',category:'programación',title:'HTML, CSS y JavaScript',keywords:['que es html','que es css','que es javascript','programar una web'],answer:'HTML define la estructura y el contenido, CSS controla el aspecto visual y JavaScript añade comportamiento e interacción. Juntos forman la base de muchas páginas web.',actions:[]},
+  {id:'coding-algorithm',category:'programación',title:'Algoritmo',keywords:['que es un algoritmo','algoritmos','programacion','resolver problemas'],answer:'Un algoritmo es una secuencia finita y ordenada de pasos para resolver un problema o producir un resultado. Un buen algoritmo tiene entradas claras, pasos comprensibles y una condición de finalización.',actions:[]},
+  {id:'digital-recycling',category:'medio ambiente',title:'Reciclaje',keywords:['reciclar','reciclaje','separar residuos','cuidar el ambiente'],answer:'Reduce primero lo que consumes, reutiliza lo que todavía sirve y separa los residuos según las reglas de tu localidad. Limpia los envases cuando sea necesario y no mezcles pilas o aparatos electrónicos con la basura común.',actions:[]},
+  {id:'civics-democracy',category:'ciudadanía',title:'Democracia',keywords:['que es democracia','democracia','ciudadania','derechos y deberes'],answer:'La democracia es una forma de organización política en la que la ciudadanía participa en las decisiones públicas, directamente o mediante representantes. También exige derechos, responsabilidades, reglas y respeto a las diferencias.',actions:[]},
+  {id:'language-grammar',category:'lengua',title:'Sujeto y predicado',keywords:['sujeto y predicado','gramatica','analizar una oracion','oracion'],answer:'El sujeto es de quién o de qué se habla; el predicado dice algo sobre ese sujeto y contiene el verbo. Pregunta “¿quién realiza o recibe la acción?” para encontrar el sujeto, pero recuerda que a veces está omitido.',actions:[]},
+  {id:'learning-critical-thinking',category:'aprendizaje',title:'Pensamiento crítico',keywords:['pensamiento critico','evaluar informacion','noticias falsas','distinguir verdad'],answer:'Pregunta quién afirma algo, qué evidencia presenta, cuándo se publicó y si otras fuentes confiables coinciden. Distingue hechos, opiniones y publicidad; un titular llamativo no sustituye a la evidencia.',actions:[]},
+  {id:'study-notes',category:'estudio',title:'Tomar buenos apuntes',keywords:['tomar apuntes','apuntes de clase','notas de estudio','como tomar notas'],answer:'Anota conceptos y relaciones con tus propias palabras, no cada frase. Deja preguntas en un margen y, al terminar, escribe un resumen breve. Revisar tus apuntes el mismo día y convertirlos en preguntas mejora el aprendizaje.',actions:[['Abrir Diario','journal']]},
+  {id:'study-smart-goals',category:'hábitos',title:'Objetivos SMART',keywords:['objetivo smart','metas de estudio','meta concreta','planificar objetivo'],answer:'Una meta útil es específica, medible, alcanzable, relevante y con fecha. “Estudiar más” es vago; “resolver 10 ejercicios de fracciones antes de las 6” te dice exactamente qué hacer y cuándo terminar.',actions:[['Añadir una tarea','tasks']]},
+  {id:'study-citation',category:'aprendizaje',title:'Citar fuentes y evitar plagio',keywords:['citar fuentes','plagio','copiar tarea','referencias bibliograficas'],answer:'Usa tus propias palabras y conserva los datos de la fuente: autor, título, sitio o libro y fecha de consulta. Si copias una frase exacta, ponla entre comillas y cítala. Entender y explicar vale más que pegar texto.',actions:[]},
+  {id:'science-dna',category:'biología',title:'ADN',keywords:['que es el adn','adn','genes','herencia genetica'],answer:'El ADN es una molécula que almacena instrucciones biológicas. Los genes son segmentos de ADN que participan en características y funciones; se organizan en cromosomas dentro de las células.',actions:[]},
+  {id:'science-ecosystem',category:'biología',title:'Ecosistema',keywords:['que es un ecosistema','ecosistema','seres vivos y ambiente','habitat'],answer:'Un ecosistema reúne seres vivos y el entorno físico con el que interactúan. La energía suele entrar por productores como las plantas y pasa por consumidores y descomponedores; la materia se recicla.',actions:[]},
+  {id:'science-food-chain',category:'biología',title:'Cadena alimentaria',keywords:['cadena alimentaria','cadena trofica','productores consumidores descomponedores'],answer:'Una cadena alimentaria muestra cómo fluye la energía: productores, consumidores y descomponedores. En una red alimentaria varias cadenas se conectan y una especie puede ocupar más de un papel.',actions:[]},
+  {id:'science-atom',category:'química',title:'Átomo',keywords:['que es un atomo','atomo','protones neutrones electrones'],answer:'Un átomo tiene un núcleo con protones y neutrones, rodeado por electrones. El número de protones identifica el elemento; los electrones participan especialmente en los enlaces químicos.',actions:[]},
+  {id:'science-ph',category:'química',title:'Escala de pH',keywords:['que es el ph','ph acido basico','acidez','alcalino'],answer:'El pH describe qué tan ácida o básica es una disolución. En la escala habitual, 7 es neutro, valores menores son ácidos y mayores son básicos. No pruebes sustancias para averiguarlo.',actions:[]},
+  {id:'science-matter',category:'química',title:'Estados de la materia',keywords:['estados de la materia','solido liquido gas','cambios de estado'],answer:'En un sólido las partículas están muy juntas y mantienen forma; en un líquido se deslizan y toman la forma del recipiente; en un gas están más separadas y se expanden. Calentar o enfriar puede provocar cambios de estado.',actions:[]},
+  {id:'science-energy',category:'física',title:'Energía',keywords:['que es la energia','tipos de energia','energia cinetica potencial'],answer:'La energía es la capacidad de producir cambios o realizar trabajo. Puede presentarse como cinética, potencial, térmica, química, eléctrica o luminosa; no desaparece, se transforma y se transfiere.',actions:[]},
+  {id:'science-density',category:'física',title:'Densidad',keywords:['que es la densidad','calcular densidad','masa y volumen'],answer:'La densidad relaciona masa y volumen: d = m ÷ V. Dos objetos del mismo tamaño pueden tener distinta masa porque sus materiales tienen distinta densidad.',actions:[]},
+  {id:'math-average',category:'matemática',title:'Promedio',keywords:['calcular promedio','media aritmetica','promedio de numeros'],answer:'Suma todos los valores y divide entre cuántos valores hay. Si hay valores extremos, también conviene mirar la mediana, que es el dato central al ordenar la lista.',actions:[]},
+  {id:'math-probability',category:'matemática',title:'Probabilidad',keywords:['probabilidad','calcular probabilidad','posibilidades'],answer:'Si todos los resultados son igualmente posibles, probabilidad = casos favorables ÷ casos posibles. Se expresa entre 0 y 1 o entre 0% y 100%; 0 es imposible y 1 es seguro.',actions:[]},
+  {id:'math-proportion',category:'matemática',title:'Regla de tres',keywords:['regla de tres','proporcion','magnitudes proporcionales'],answer:'Comprueba primero que las magnitudes sean proporcionales. Si a corresponde a b y c corresponde a x, puedes plantear a/b = c/x y despejar x mediante multiplicación cruzada.',actions:[]},
+  {id:'math-decimals',category:'matemática',title:'Decimales',keywords:['sumar decimales','multiplicar decimales','numeros decimales'],answer:'Para sumar o restar, alinea las comas y completa con ceros. Para multiplicar, multiplica como enteros y coloca la coma contando las cifras decimales de los factores.',actions:[]},
+  {id:'geo-coordinates',category:'geografía',title:'Latitud y longitud',keywords:['latitud y longitud','coordenadas geograficas','ubicacion en un mapa'],answer:'La latitud mide la distancia al norte o sur del ecuador; la longitud mide la distancia al este u oeste del meridiano de Greenwich. Juntas forman coordenadas para ubicar un lugar.',actions:[]},
+  {id:'geo-weather-climate',category:'geografía',title:'Tiempo y clima',keywords:['diferencia entre tiempo y clima','tiempo atmosferico','clima'],answer:'El tiempo atmosférico es lo que ocurre en la atmósfera ahora o durante pocos días. El clima es el patrón promedio de una región durante periodos largos. Un día frío no contradice por sí solo el calentamiento global.',actions:[]},
+  {id:'geo-renewable',category:'medio ambiente',title:'Energías renovables',keywords:['energias renovables','energia solar eolica','no renovables'],answer:'Las renovables se regeneran naturalmente a escala humana, como solar, eólica, hidráulica y geotérmica. Que sean renovables no significa que no tengan impactos: también hay que considerar espacio, materiales, residuos y ecosistemas.',actions:[]},
+  {id:'history-industrial',category:'historia',title:'Revolución Industrial',keywords:['revolucion industrial','maquinas y fabricas','industrializacion'],answer:'La Revolución Industrial comenzó en Gran Bretaña durante el siglo XVIII y transformó la producción con máquinas, fábricas y nuevas fuentes de energía. Cambió el trabajo, las ciudades, el transporte y las condiciones sociales.',actions:[]},
+  {id:'history-ancient-egypt',category:'historia',title:'Antiguo Egipto',keywords:['antiguo egipto','egipto faraones','piramides'],answer:'El antiguo Egipto se desarrolló alrededor del río Nilo. Su sociedad tuvo faraones, administración, escritura jeroglífica y una religión diversa; las pirámides fueron grandes construcciones funerarias de algunos periodos.',actions:[]},
+  {id:'coding-variable',category:'programación',title:'Variable',keywords:['que es una variable','variables en programacion','guardar datos codigo'],answer:'Una variable es un nombre asociado a un valor que un programa puede leer o cambiar. Por ejemplo, “edad” podría guardar el número 15; el tipo de valor determina qué operaciones tiene sentido hacer.',actions:[]},
+  {id:'coding-function',category:'programación',title:'Función',keywords:['que es una funcion en programacion','funciones de codigo','parametros y retorno'],answer:'Una función agrupa instrucciones reutilizables. Puede recibir parámetros, procesarlos y devolver un resultado; dividir un programa en funciones facilita leerlo, probarlo y corregirlo.',actions:[]},
+  {id:'coding-debugging',category:'programación',title:'Depurar código',keywords:['depurar codigo','debuggear','error de programacion','arreglar bug'],answer:'Reproduce el error, lee el mensaje, reduce el problema a un ejemplo pequeño y revisa los valores paso a paso. Cambia una cosa a la vez y vuelve a probar; anotar qué esperabas y qué ocurrió acelera la búsqueda.',actions:[]},
+  {id:'coding-database',category:'programación',title:'Base de datos',keywords:['que es una base de datos','database','tablas registros campos'],answer:'Una base de datos organiza información para guardarla, buscarla y actualizarla. En una base relacional, las tablas tienen registros y campos, y las relaciones evitan repetir datos innecesariamente.',actions:[]},
+  {id:'language-accent',category:'lengua',title:'Tildes',keywords:['cuando usar tilde','reglas de acentuacion','palabras agudas graves esdrujulas'],answer:'Las palabras agudas llevan tilde si terminan en vocal, n o s; las graves si no terminan en vocal, n o s; las esdrújulas siempre llevan tilde. Hay excepciones y casos de hiato, así que conviene revisar la palabra concreta.',actions:[]},
+  {id:'language-argument',category:'lengua',title:'Argumentar',keywords:['como hacer un argumento','argumento y evidencia','opinion con razones'],answer:'Presenta una afirmación, explica el motivo y apóyalo con una evidencia o ejemplo. Considera una posible objeción y responde con respeto; una opinión se vuelve argumento cuando tiene razones comprobables.',actions:[]},
+  {id:'digital-two-factor',category:'seguridad',title:'Verificación en dos pasos',keywords:['verificacion dos pasos','autenticacion 2fa','codigo de seguridad'],answer:'La verificación en dos pasos añade una segunda prueba además de la contraseña, como una app autenticadora o una llave de seguridad. Actívala desde la configuración oficial y nunca compartas sus códigos.',actions:[]},
+  {id:'digital-cyberbullying',category:'seguridad',title:'Ciberacoso',keywords:['ciberbullying','acoso por internet','mensajes de acoso'],answer:'No respondas con amenazas, guarda capturas y bloquea o reporta la cuenta. Cuéntaselo a un adulto de confianza, docente o tutor; si hay amenazas físicas o difusión de información íntima, busca ayuda inmediata.',actions:[]},
+  {id:'app-tasks',category:'mind glow',title:'Tareas',keywords:['como uso tareas','crear tarea','lista de tareas','organizar mis tareas'],answer:'En Tareas divide algo grande en pasos pequeños y marca cada paso al terminar. Un buen paso empieza con un verbo: “leer”, “resolver”, “ensayar” o “entregar”.',actions:[['Abrir Tareas','tasks']]},
+  {id:'app-focus',category:'mind glow',title:'Focus',keywords:['como uso focus','temporizador','modo focus','concentracion en mind glow'],answer:'Focus te ayuda a trabajar en bloques con pausas. Antes de iniciar escribe qué resultado quieres obtener y deja una sola tarea visible.',actions:[['Abrir Focus','focus']]},
+  {id:'app-journal',category:'mind glow',title:'Diario',keywords:['como uso diario','escribir diario','diario personal','anotar sentimientos'],answer:'Usa el Diario para descargar pensamientos, registrar ánimo y convertir una preocupación en un siguiente paso. Es privado dentro de tu perfil local; evita escribir datos sensibles.',actions:[['Abrir Diario','journal']]},
+  {id:'app-arcade',category:'mind glow',title:'Arcade',keywords:['que juegos hay','juegos de mind glow','arcade','quiero jugar','juegos competitivos','juegos faciles'],answer:'Arcade reúne 14 retos propios: Keyboard, Focus Tap, Glow Duel, Neon Stack, Target Arena, Color Rush, Merge Blitz, Lane Rush, Quiz Clash, Word Sprint, Memory Glow, Food Catch, Glow Canvas y Secret Run. Hay ritmo, reflejos, estrategia, memoria, palabras y duelos contra Capi; úsalo como descanso con límite, no como una distracción infinita.',actions:[['Abrir Arcade','arcade']]},
+  {id:'app-studio',category:'mind glow',title:'Game Studio',keywords:['game studio','crear juego','juego 3d','generar mundo'],answer:'Game Studio convierte una descripción en un mundo 3D jugable dentro de la app. Escribe el escenario, objetivo y estilo; después puedes pedir cambios como “añade enemigos” o “haz el mapa más grande”.',actions:[['Abrir Game Studio','studio']]},
+  {id:'app-multiuser',category:'mind glow',title:'Perfiles de usuario',keywords:['varios usuarios','multiusuario','otro usuario','cambiar usuario','cambio de usuario','perfiles'],answer:'Mind Glow guarda cada perfil con un identificador separado: el correo de Google cuando existe o el nombre elegido en el acceso manual. Así las tareas, progreso, memoria y diario de una persona no se mezclan con los de otra en el mismo navegador.',actions:[['Abrir Perfil','profile']]}
+];
+
+function loadKnowledge(){
+  const saved = readJSON(AI_DB_KEY, null);
+  const seedIds = new Set(KNOWLEDGE_SEED.map(doc => doc.id));
+  const custom = saved && Array.isArray(saved.documents) ? saved.documents.filter(doc => doc && (!seedIds.has(doc.id) || doc.custom)) : [];
+  const byId = {};
+  KNOWLEDGE_SEED.concat(custom).forEach(doc => { if(doc && doc.id) byId[doc.id] = doc; });
+  const db = {version:3, updatedAt:(saved && saved.updatedAt) || Date.now(), documents:Object.values(byId)};
+  try{ localStorage.setItem(AI_DB_KEY, JSON.stringify(db)); }catch(e){}
+  return db;
+}
+let aiDatabase = loadKnowledge();
+const AI_STOP_WORDS = new Set(['que','como','para','una','uno','las','los','del','por','con','sin','tengo','quiero','puedo','esta','este','eso','hoy','muy','más','mas','me','mi','de','el','la','y','o','a','en']);
+function knowledgeRank(query, contextId){
+  const q = normalText(query);
+  const tokens = q.split(/[^a-z0-9]+/).filter(t => t.length > 2 && !AI_STOP_WORDS.has(t));
+  if(!tokens.length && !q.trim()) return [];
+  return aiDatabase.documents.map(doc => {
+    const title = normalText(doc.title);
+    const keys = (doc.keywords || []).map(normalText);
+    let score = contextId && doc.id === contextId ? 6 : 0;
+    keys.forEach(k => { if(q.includes(k)) score += k.includes(' ') ? 8 : 4; });
+    tokens.forEach(t => {
+      if(title.includes(t)) score += 2;
+      if(keys.some(k => k.split(/[^a-z0-9]+/).includes(t))) score += 2;
+      if(normalText(doc.answer).includes(t)) score += .25;
+    });
+    return {doc,score};
+  }).sort((a,b) => b.score-a.score);
+}
+function knowledgeSearch(query, contextId){
+  const ranked = knowledgeRank(query, contextId);
+  return ranked[0] && ranked[0].score >= 4 ? ranked[0].doc : null;
+}
+function knowledgeSearchMany(query, contextId, limit){
+  return knowledgeRank(query, contextId).filter(hit => hit.score >= 4).slice(0, limit || 3).map(hit => hit.doc);
+}
+function addKnowledgeEntry(entry){
+  if(!entry || !entry.id || !entry.title || !entry.answer) return false;
+  aiDatabase.documents = aiDatabase.documents.filter(d => d.id !== entry.id).concat(Object.assign({}, entry, {custom:true}));
+  aiDatabase.updatedAt = Date.now();
+  try{ localStorage.setItem(AI_DB_KEY, JSON.stringify(aiDatabase)); }catch(e){ return false; }
+  return true;
+}
+window.GlowAIKnowledge = {search:knowledgeSearch, searchMany:knowledgeSearchMany, add:addKnowledgeEntry, list:() => aiDatabase.documents.slice()};
+
+const LOCAL_AI_INTENTS = new Set(['math','time','date','coin','dice','choose','panic','stress','focus','exam','sleep','calm','sad','lazy','progress','joke','fact','music','hello','thanks','fun','something','capabilities','about','game-studio','art','safety','emergency']);
+const LOCAL_PRIVATE_KNOWLEDGE = new Set(['bienestar','seguridad','mind glow']);
+const AI_FALLBACKS = [
+  {text:'Quiero darte una respuesta útil y no inventar. Puedes decirme el tema y qué necesitas exactamente, o elegir una opción para avanzar ahora.',actions:[['Respirar en Calma','calm'],['Organizar Tareas','tasks'],['Abrir Bienestar','wellness']]},
+  {text:'Todavía no entendí del todo, pero sí puedo acompañarte por otro camino. ¿Quieres relajarte, ordenar algo, estudiar o despejarte?',actions:[['Ir a Calma','calm'],['Abrir Focus','focus'],['Jugar en Arcade','arcade']]},
+  {text:'No quiero responderte cualquier cosa. Prueba reformularlo con una palabra clave o usa uno de estos accesos para que hagamos algo útil juntos.',actions:[['Escribir en Diario','journal'],['Ver mi Perfil','profile'],['Crear un juego','studio']]},
+  {text:'Esa pregunta necesita un poco más de contexto. Mientras me lo das, puedo ayudarte a revisar tu bienestar, planificar el día o desconectar unos minutos.',actions:[['Test de Bienestar','wellness'],['Plan para hoy','tasks'],['Abrir Arcade','arcade']]}
+];
+const PERSONAL_EMOTION_PATTERN = /\b(me siento|estoy|ando|tengo)\b.*\b(ansios|ansiedad|triste|mal|solo|sola|enoj|rabia|miedo|asusta|culpable|verguenza|agob|abrum|confund|perdid|agotad|raro|rara)\b/;
+let aiRequestSerial = 0;
+async function askExternalAI(question, localOut, guard){
+  const meta = localOut[2] || {};
+  const localFallback = reason => [localOut[0], localOut[1], Object.assign({}, meta, {source:'local', fallback:reason})];
+  const personalEmotion = PERSONAL_EMOTION_PATTERN.test(normalText(question));
+  const privateKnowledge = meta.intent && meta.intent.indexOf('knowledge:') === 0 &&
+    LOCAL_PRIVATE_KNOWLEDGE.has(meta.intent.slice('knowledge:'.length));
+  if(LOCAL_AI_INTENTS.has(meta.intent) || (meta.intent && meta.intent.indexOf('emotion:') === 0) || privateKnowledge ||
+     personalEmotion || (typeof navigator !== 'undefined' && navigator.onLine === false))
+    return localFallback(privateKnowledge || personalEmotion ? 'private' : 'offline');
+  try{
+    const localDocs = knowledgeSearchMany(question, meta.kbId, 3);
+    const localContext = localDocs.length ? localDocs.map(doc =>
+      '• '+doc.title+' ('+doc.category+'): '+doc.answer
+    ).join('\n') : (meta.intent && meta.intent !== 'general' ? 'La base local clasificó la consulta como '+meta.intent+'.' : '');
+    const history = (state.aiHistory || []).slice(0,-2).slice(-8).map(item => ({
+      role:item.role === 'assistant' ? 'assistant' : 'user', content:item.text
+    }));
+    const res = await fetch(AI_REMOTE_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        message:question,
+        profile:state.user && state.user.name ? state.user.name : '',
+        history,
+        localContext:localContext
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok || !data.answer) return localFallback('external-unavailable');
+    if(!guard || guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return localFallback('stale');
+    const answer = String(data.answer).trim();
+    const last = state.aiHistory && state.aiHistory[state.aiHistory.length-1];
+    if(last && last.role === 'assistant'){
+      last.text = answer.slice(0,700);
+      last.intent = 'external-ai';
+      last.source = data.source || 'external-ai';
+      last.sources = Array.isArray(data.sources) ? data.sources.slice(0,5) : [];
+    }
+    const memory = state.aiMemory && state.aiMemory[state.aiMemory.length-1];
+    if(memory){ memory.intent = 'external-ai'; memory.source = data.source || 'external-ai'; }
+    save();
+    return [answer, localOut[1], {intent:'external-ai', source:data.source || 'external-ai', sources:Array.isArray(data.sources) ? data.sources.slice(0,5) : []}];
+  }catch(error){
+    return localFallback('external-unavailable');
+  }
+}
+
 /* ---------- Glow AI ---------- */
 function aiInit(){
   const box = $('#chatMessages'), input = $('#chatInput');
-  function add(t, who, actions){
+  function add(t, who, actions, sources){
     const d = document.createElement('div');
     d.className = 'bubble ' + who;
     t.split('\n').forEach((line,i) => {
@@ -290,14 +672,39 @@ function aiInit(){
       actions.forEach(a => {
         const b = document.createElement('button');
         b.type='button'; b.className='chat-action-btn'; b.textContent=a[0];
-        b.addEventListener('click', () => { showView(a[1]); sfx('click'); toast('Abriendo '+a[0]); });
+        b.addEventListener('click', () => {
+          if(/^(https?:|tel:)/i.test(a[1] || '')) window.location.href = a[1];
+          else { showView(a[1]); toast('Abriendo '+a[0]); }
+          sfx('click');
+        });
         row.appendChild(b);
       });
       d.appendChild(row);
     }
+    if(sources && sources.length){
+      const sourceBox = document.createElement('div');
+      sourceBox.className = 'bubble-sources';
+      const label = document.createElement('small');
+      label.textContent = 'Fuentes consultadas';
+      sourceBox.appendChild(label);
+      sources.slice(0,5).forEach(source => {
+        if(!source || !/^https?:\/\//i.test(source.url || '')) return;
+        const a = document.createElement('a');
+        a.href = source.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.textContent = source.title || source.url;
+        sourceBox.appendChild(a);
+      });
+      if(sourceBox.querySelector('a')) d.appendChild(sourceBox);
+    }
     box.appendChild(d); box.scrollTop = box.scrollHeight;
   }
-  add('Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal local.\nPuedo ayudarte a organizar una sesión de estudio, resolver cálculos, decirte hora o fecha, lanzar moneda o dado, generar Glow Art y usar tu progreso de Mind Glow para sugerirte una acción.\nFunciona sin API key: no envío tus mensajes a servidores. ¿Por dónde empezamos?','ai');
+  const welcome = () => 'Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal local.\nPuedo reconocer señales emocionales en lo que escribes, responder con empatía y ofrecer pasos seguros sin diagnosticarte. También tengo una base de conocimiento de estudio, ciencia, bienestar, seguridad digital y Mind Glow.\nCuando el servidor está configurado, consulto un proveedor externo para preguntas abiertas. No invento datos: si no conozco algo o no hay conexión, te lo diré. ¿Cómo te sientes hoy?';
+  window.refreshGlowAI = () => {
+    box.innerHTML = '';
+    add(welcome(),'ai');
+    (state.aiHistory || []).slice(-12).forEach(m => add(m.text, m.role === 'user' ? 'user' : 'ai', m.actions || [], m.sources || []));
+  };
+  window.refreshGlowAI();
 
   /* --- Preguntas de conversación: respuestas divertidas --- */
   const pick = a => a[Math.floor(Math.random()*a.length)];
@@ -348,15 +755,45 @@ function aiInit(){
   function respond(text){
     const s = norm(text);
     let intent = 'general';
+    let kbId = null;
     let actions = [];
+    let sources = [];
     const h = new Date().getHours();
     const saludo = h<12 ? 'Buenos días' : h<19 ? 'Buenas tardes' : 'Buenas noches';
     const pending=state.tasks.filter(t=>!t.done).length, mood=state.mood ? state.mood.label.toLowerCase() : '';
     let reply = 'Puedo darte una siguiente acción pequeña. Prueba: "estoy estresado", "no puedo concentrarme", "dame un plan de estudio", "quiero jugar", "mi progreso", un cálculo o un dato curioso.'+(pending?' Ahora tienes '+pending+' tarea(s) pendiente(s).':'')+(mood?' Noto que marcaste tu ánimo como '+mood+'.':'');
     const funHit = (!/panic|muriendo de|no puedo respirar/.test(s))
       ? FUNNY.find(f => f[0].test(s)) : null;
-    if(funHit){
+    const previous = (state.aiMemory || []).slice(-1)[0];
+    const followUp = /^(y |y como|y si|como lo hago|dame un ejemplo|otro ejemplo|explicalo|explica eso|mas sobre|que mas|continua)/.test(s);
+    const knowledgeHit = !funHit ? knowledgeSearch(text, followUp && previous && previous.kbId) : null;
+    const emotionSignal = detectEmotion(text);
+    if(emotionSignal){
+      const mental = mentalHealthReply(emotionSignal);
+      intent = emotionSignal.id === 'crisis' ? 'safety' : 'emotion:'+emotionSignal.id;
+      reply = mental.reply; actions = mental.actions || []; sources = mental.sources || [];
+      if(emotionSignal.id !== 'crisis'){
+        state.emotionLog = (state.emotionLog || []).slice(-29);
+        state.emotionLog.push({emotion:emotionSignal.id, intensity:emotionSignal.intensity, confidence:emotionSignal.confidence, date:new Date().toISOString()});
+      }
+    } else if(funHit){
       intent='fun'; reply=pick(funHit[1]);
+    } else if(knowledgeHit){
+      kbId = knowledgeHit.id;
+      intent='knowledge:'+knowledgeHit.category;
+      reply = knowledgeHit.answer;
+      actions = Array.isArray(knowledgeHit.actions) ? knowledgeHit.actions : [];
+      sources = Array.isArray(knowledgeHit.sources) ? knowledgeHit.sources : [];
+      if(followUp && previous && previous.kbId === knowledgeHit.id)
+        reply = 'Sobre '+knowledgeHit.title+': '+knowledgeHit.answer;
+    } else if(/^dime algo$|^cuentame algo$|^cuentame algo interesante$/.test(s)){
+      intent='something';
+      const something = pickFresh('something', [
+        {reply:'Algo para ti: no necesitas resolver todo hoy para estar avanzando. Elige una sola acción de dos minutos —tomar agua, ordenar una tarea o escribir cómo te sientes— y luego cuéntame qué necesitas.',actions:[['Abrir Diario','journal'],['Ver Tareas','tasks']]},
+        {reply:'Te dejo una idea: cuando una preocupación parece enorme, escríbela en una frase y separa lo que puedes hacer hoy de lo que no depende de ti. Si quieres, lo hacemos juntos.',actions:[['Escribir en Diario','journal'],['Abrir Bienestar','wellness']]},
+        {reply:'Aquí va algo útil: descansar también es parte de avanzar. Puedes respirar un minuto, moverte un poco o elegir una tarea pequeña para recuperar ritmo.',actions:[['Ir a Calma','calm'],['Abrir Focus','focus']]}
+      ]);
+      reply=something.reply; actions=something.actions;
     } else if(/videojuego|juego 3d|crear.*juego|crea.*juego|game studio/.test(s)){
       state.studioDraft=text; intent='game-studio'; reply='Puedo convertir esa idea en un mundo 3D jugable dentro de Mind Glow. Dejé tu descripción preparada en Game Studio para que no tengas que copiarla.';
       actions=[['◈ Abrir Game Studio','studio']];
@@ -405,7 +842,7 @@ function aiInit(){
       reply=pick([m[1],m[2]]).replace(/[¿?]/g,'').trim()+' — decisión tomada por mis circuitos ⚡';
     } else if(/panic|ansiedad extrem|muriendo de|no puedo respirar/.test(s)){
       intent='panic';
-      reply='Respira conmigo (técnica 5-4-3-2-1):\n• Nombra 5 cosas que VES\n• 4 que puedes TOCAR\n• 3 que escuchas\n• 2 que hueles\n• 1 que saboreas\nEstás a salvo. Esto pasa y va a pasar.';
+      reply='Podemos probar la técnica 5-4-3-2-1 si estás en un lugar seguro:\n• Nombra 5 cosas que VES\n• 4 que puedes TOCAR\n• 3 que escuchas\n• 2 que hueles\n• 1 que saboreas\nSi hay peligro, dificultad real para respirar o riesgo de hacerte daño, busca ayuda humana inmediata.';
       actions=[['◌ Respirar ahora','calm'],['✎ Escribirlo','journal']];
     } else if(/estres|agobi|presion|ansios|nervios/.test(s)){
       intent='stress'; reply='Vamos a bajar el ritmo:\n1) 60 segundos de respiración en Calma\n2) Elige UNA sola tarea\n3) Da el primer paso pequeño.\n¿Te acompaño?';
@@ -450,29 +887,59 @@ function aiInit(){
     } else if(/\bmusica\b|cancion|sonidos/.test(s)){
       intent='music'; reply='Puedo sugerirte: música original de Mind Glow (tres pistas) o sonidos ambientales de lluvia, océano, bosque y río. ¿Cuál va contigo?';
       actions=[['🎵 Música y sonidos','calm']];
+    } else if(/como estas|como te va|que tal estas|todo bien/.test(s)){
+      intent='hello'; reply=pickFresh('hello-status', [
+        saludo+(firstName()?', '+firstName():'')+'! Estoy lista para escucharte. Cuéntame cómo te sientes o qué quieres conseguir hoy.',
+        'Estoy aquí contigo y funcionando bien 💜. ¿Quieres hablar de cómo te sientes o prefieres hacer algo práctico?',
+        'Todo listo por aquí. Puedo escucharte sin juzgarte, ayudarte a organizarte o abrir una actividad para despejarte. ¿Qué necesitas?'
+      ]);
     } else if(/hola|buenas|hey|que tal|saludos/.test(s)){
-      intent='hello'; reply=saludo+(firstName()?', '+firstName():'')+'! Cuéntame qué quieres conseguir hoy: concentrarte, relajarte, organizarte o jugar.';
+      intent='hello'; reply=pickFresh('hello', [
+        saludo+(firstName()?', '+firstName():'')+'! Cuéntame qué quieres conseguir hoy: concentrarte, relajarte, organizarte o jugar.',
+        '¡Hola! Qué bueno verte por aquí. ¿Cómo vienes hoy: con ganas de hablar, estudiar, descansar o jugar?',
+        '¡Hey! Estoy contigo. Puedes contarme algo, pedirme un plan o elegir una actividad de Mind Glow.'
+      ]);
     } else if(/quien eres|eres ia|inteligencia|como funciona/.test(s)){
-      intent='about'; reply='Soy Glow AI 3.0, asistente local de Mind Glow: entiendo lo que escribes y te doy acciones concretas. Todo ocurre en tu navegador, sin enviar datos a ningún servidor.';
+      intent='about'; reply='Soy Glow AI 3.0, asistente de Mind Glow. Uso una base local para acciones y respuestas conocidas; cuando el servidor está configurado, consulto un proveedor externo para preguntas abiertas. No escribas información sensible en el chat.';
     } else if(/gracias|genial|perfect|excelente/.test(s)){
       intent='thanks'; reply='¡Con gusto! Aquí estoy cuando me necesites 💜';
     }
+    if(intent === 'general'){
+      state.aiUnknown = (state.aiUnknown || []).slice(-39);
+      state.aiUnknown.push({text:text.slice(0,180), date:new Date().toISOString(), userId:activeUserId});
+      const fallback = pickFresh('fallback', AI_FALLBACKS);
+      intent='fallback';
+      reply=fallback.text;
+      actions=fallback.actions;
+    }
     state.aiMemory = (state.aiMemory||[]).slice(-6);
-    state.aiMemory.push({ intent:intent, text:text.slice(0,80) });
+    state.aiMemory.push({ intent:intent, kbId:kbId, emotion:emotionSignal && emotionSignal.id !== 'crisis' ? emotionSignal.id : null, text:text.slice(0,80) });
+    state.aiHistory = (state.aiHistory || []).slice(-18);
+    state.aiHistory.push({role:'user', text:text.slice(0,240)});
+    state.aiHistory.push({role:'assistant', text:reply.slice(0,700), intent:intent, kbId:kbId, actions:actions, sources:sources});
     save();
     $('#aiContext').textContent = 'Última intención: '+intent+' · Nivel '+state.level+
-      ' ('+state.xp+' XP) · Racha '+state.streak+'d · '+(state.mood ? 'ánimo: '+state.mood.label : 'sin check-in');
-    return [reply, actions];
+      ' ('+state.xp+' XP) · Racha '+state.streak+'d · '+(state.mood ? 'ánimo: '+state.mood.label : 'sin check-in')+
+      (emotionSignal && emotionSignal.id !== 'crisis' ? ' · emoción detectada: '+emotionSignal.label : '');
+    return [reply, actions, {intent:intent, kbId:kbId, source:'local', knowledge:knowledgeHit ? {
+      title:knowledgeHit.title, category:knowledgeHit.category, answer:knowledgeHit.answer
+    } : null, emotion:emotionSignal, sources:sources}];
   }
   $('#chatForm').addEventListener('submit', e => {
     e.preventDefault();
     const t = input.value.trim(); if(!t) return;
     add(t,'user'); input.value = '';
-    $('#aiStatus').textContent = 'Pensando…';
-    setTimeout(() => {
-      const out = respond(t);
-      add(out[0],'ai',out[1]);
-      $('#aiStatus').textContent = 'Lista para escucharte';
+    const guard = {userId:activeUserId, serial:++aiRequestSerial};
+    $('#aiStatus').textContent = 'Pensando y buscando…';
+    setTimeout(async () => {
+      if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
+      const localOut = respond(t);
+      $('#aiStatus').textContent = 'Consultando conocimiento externo…';
+      const out = await askExternalAI(t, localOut, guard);
+      if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
+      add(out[0],'ai',out[1],out[2] && out[2].sources);
+      $('#aiStatus').textContent = out[2] && out[2].source === 'external-ai' ? 'Respuesta externa lista' :
+        (out[2] && out[2].fallback ? 'Base local activa' : 'Lista para escucharte');
     }, 550);
   });
   $$('.ai-actions button').forEach(b => b.addEventListener('click', () => {
@@ -1266,7 +1733,7 @@ const Studio = (() => {
   }
   function updateHud(){if($s('studioScore'))$s('studioScore').textContent=score;if($s('studioCoins'))$s('studioCoins').textContent=collected;if($s('studioNitro'))$s('studioNitro').textContent=Math.round(nitro);}
   function persist(){if(!spec)return;state.studioProject=JSON.parse(JSON.stringify(spec));save();}
-  function persistRun(){if(!spec||!player)return;state.studioRun={prompt:spec.prompt,score,collected,nitro,x:player.position.x,z:player.position.z};localStorage.setItem(KEY,JSON.stringify(state));}
+  function persistRun(){if(!spec||!player)return;state.studioRun={prompt:spec.prompt,score,collected,nitro,x:player.position.x,z:player.position.z};persistCurrent();}
   function updateCamera(){if(!player||!camera)return;const eye=new THREE.Vector3(player.position.x,player.position.y+1.48,player.position.z);camera.position.lerp(eye,.32);const look=new THREE.Vector3(eye.x+Math.sin(orbitYaw)*5,eye.y+Math.sin(orbitPitch)*1.8,eye.z+Math.cos(orbitYaw)*5);camera.lookAt(look);}
   function loop(){raf=requestAnimationFrame(loop);if(!scene||!camera)return;const dt=Math.min(clock.getDelta(),.05);if(player){objects.coins.forEach(c=>{if(c.visible)c.rotation.z+=dt*3;});if(objects.rain){const p=objects.rain.geometry.attributes.position;for(let i=1;i<p.count*3;i+=3){let y=p.array[i]-dt*18;p.array[i]=y<0?22:y;}p.needsUpdate=true;}if(running){const speed=(keys.shift&&spec.nitro&&nitro>0)?.28:.13;const forwardX=Math.sin(orbitYaw),forwardZ=Math.cos(orbitYaw),rightX=Math.cos(orbitYaw),rightZ=-Math.sin(orbitYaw);const side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),walk=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);if(keys.shift&&spec.nitro&&nitro>0)nitro=Math.max(0,nitro-dt*22);else nitro=Math.min(100,nitro+dt*5);player.position.x=Math.max(-14*spec.mapScale,Math.min(14*spec.mapScale,player.position.x+(rightX*side+forwardX*walk)*speed));player.position.z=Math.max(-25*spec.mapScale,Math.min(15*spec.mapScale,player.position.z+(rightZ*side+forwardZ*walk)*speed));if(keys.space&&jumpY<=.01){jumpV=spec.doubleJump?7:6;keys.space=false;}jumpV-=dt*16;jumpY=Math.max(0,jumpY+jumpV*dt);player.position.y=jumpY;player.rotation.y=orbitYaw;objects.coins.forEach(c=>{if(c.visible&&c.position.distanceTo(player.position)<1.25){c.visible=false;collected++;score+=10;sfx('good');}});objects.hazards.forEach(h=>{if(h.position.distanceTo(player.position)<1.05){score=Math.max(0,score-5);player.position.x-=forwardX*1.4;player.position.z-=forwardZ*1.4;sfx('bad');}});objects.enemies.forEach(e=>{if(e.visible){e.rotation.y+=dt*2;e.position.lerp(new THREE.Vector3(player.position.x,e.position.y,player.position.z),dt*.035);if(e.position.distanceTo(player.position)<1.1){score=Math.max(0,score-10);player.position.x-=forwardX*2;player.position.z-=forwardZ*2;sfx('bad');}}});updateHud();}updateCamera();}renderer.render(scene,camera);}
   function resize(){if(!renderer||!camera)return;const wrap=$s('studioViewport')?.parentElement;if(!wrap)return;const w=wrap.clientWidth,h=wrap.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
@@ -1288,7 +1755,7 @@ const Studio = (() => {
     const draft=state.studioDraft;
     if(draft){$s('studioPrompt').value=draft;setTimeout(()=>generate(false),80);return true;}
     let saved=state.studioProject;
-    if(!saved){try{saved=JSON.parse(localStorage.getItem('mindGlowStudio')||'null');}catch(e){saved=null;}}
+    if(!saved){try{const profiles=readProfiles(),namedProfiles=Object.keys(profiles).filter(id=>id!=='guest:local');const legacy=JSON.parse(localStorage.getItem('mindGlowStudio')||'null');if(namedProfiles.length<=1&&legacy&&legacy.prompt){saved=legacy;state.studioProject=legacy;persistCurrent();}}catch(e){saved=null;}}
     if(saved&&saved.prompt)$s('studioPrompt').value=saved.prompt;
     if(!saved||!saved.prompt)return false;
     spec=saved;restoring=true;if(initRenderer())buildWorld();restoring=false;renderSpec();setPipeline(5);$s('studioGameStatus').textContent='Proyecto restaurado · pulsa Jugar';addChat('Recuperé tu último proyecto y tu avance local. Puedes continuar editándolo.','ai');return true;
@@ -1300,7 +1767,7 @@ const Studio = (() => {
     $s('studioImport').addEventListener('click',importProject);
     ['keydown','keyup'].forEach(type=>addEventListener(type,e=>{const studioActive=$s('view-studio')?.classList.contains('active');const typing=/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'');if(!studioActive||typing)return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','shift',' '].includes(k)){e.preventDefault();keys[k===' '?'space':k]=type==='keydown';}}));
     $$('[data-touch]').forEach(btn=>{const control=btn.dataset.touch;const set=e=>{e.preventDefault();keys[control]=true;btn.classList.add('pressed');};const clear=e=>{e.preventDefault();keys[control]=false;btn.classList.remove('pressed');};btn.addEventListener('pointerdown',set);btn.addEventListener('pointerup',clear);btn.addEventListener('pointercancel',clear);btn.addEventListener('pointerleave',clear);});
-    $s('studioGenerate').addEventListener('click',()=>generate(false));$s('studioRegenerate').addEventListener('click',()=>generate(true));$s('studioPlay').addEventListener('click',()=>{if(!spec){generate(false);return;}running=!running;$s('studioPlay').textContent=running?'Ⅱ Pausar':'▶ Jugar';$s('studioGameStatus').textContent=running?'Partida en curso':'Juego pausado';});$s('studioEdit').addEventListener('click',()=>{$s('studioChatInput').focus();toast('Dile a Mind Glow qué quieres editar');});$s('studioSave').addEventListener('click',()=>{if(!spec){toast('Genera un mundo antes de guardarlo');return;}localStorage.setItem('mindGlowStudio',JSON.stringify(spec));toast('Proyecto guardado en este dispositivo');});$s('studioShare').addEventListener('click',async()=>{if(!spec){toast('Genera un mundo antes de compartirlo');return;}const link=location.href.split('#')[0]+'#studio='+encodeURIComponent(spec.prompt);try{await navigator.clipboard.writeText(link);toast('Enlace del proyecto copiado');}catch(e){prompt('Copia este enlace para compartir tu juego:',link);}});$$('[data-studio-example]').forEach(b=>b.addEventListener('click',()=>{$s('studioPrompt').value=b.dataset.studioExample;$s('studioGenerate').click();}));$s('studioChatForm').addEventListener('submit',e=>{e.preventDefault();const input=$s('studioChatInput'),text=input.value.trim();if(!text)return;addChat(text,'user');input.value='';setTimeout(()=>modify(text),180);});
+    $s('studioGenerate').addEventListener('click',()=>generate(false));$s('studioRegenerate').addEventListener('click',()=>generate(true));$s('studioPlay').addEventListener('click',()=>{if(!spec){generate(false);return;}running=!running;$s('studioPlay').textContent=running?'Ⅱ Pausar':'▶ Jugar';$s('studioGameStatus').textContent=running?'Partida en curso':'Juego pausado';});$s('studioEdit').addEventListener('click',()=>{$s('studioChatInput').focus();toast('Dile a Mind Glow qué quieres editar');});$s('studioSave').addEventListener('click',()=>{if(!spec){toast('Genera un mundo antes de guardarlo');return;}persist();toast('Proyecto guardado en este perfil');});$s('studioShare').addEventListener('click',async()=>{if(!spec){toast('Genera un mundo antes de compartirlo');return;}const link=location.href.split('#')[0]+'#studio='+encodeURIComponent(spec.prompt);try{await navigator.clipboard.writeText(link);toast('Enlace del proyecto copiado');}catch(e){prompt('Copia este enlace para compartir tu juego:',link);}});$$('[data-studio-example]').forEach(b=>b.addEventListener('click',()=>{$s('studioPrompt').value=b.dataset.studioExample;$s('studioGenerate').click();}));$s('studioChatForm').addEventListener('submit',e=>{e.preventDefault();const input=$s('studioChatInput'),text=input.value.trim();if(!text)return;addChat(text,'user');input.value='';setTimeout(()=>modify(text),180);});
   }
   function init(){bind();const hash=location.hash.match(/^#studio=(.*)$/);if(hash){try{state.studioDraft=decodeURIComponent(hash[1]);$s('studioPrompt').value=state.studioDraft;}catch(e){}}}
   return { init, resize, restore:restoreProject, saveRun:persistRun };
@@ -1310,13 +1777,20 @@ const Studio = (() => {
 let difficulty = 'easy';
 let game = { name:'', active:false, cleanup:null, paused:false };
 const games = {
-  'Keyboard'    : { icon:'🎹', desc:'Teclas relajantes que se escuchan y se sienten.',              start:gKeyboard },
-  'Focus Tap'   : { icon:'🎯', desc:'Objetivos rápidos con racha de aciertos.',                    start:gFocusTap },
-  'Glow Duel'   : { icon:'⚡', desc:'Compite contra Capi: gana quien reaccione más rápido.',         start:gGlowDuel },
-  'Memory Glow' : { icon:'🧠', desc:'Memoriza la secuencia que crece ronda a ronda.',              start:gMemory },
-  'Food Catch'  : { icon:'🍎', desc:'Atrapa la comida que cae… ¡si atrapas una lata, pierdes!',   start:gFoodCatch },
-  'Glow Canvas' : { icon:'🪐', desc:'Dibuja patrones relajantes sin presión.',                     start:gCanvas },
-  'Secret Run'  : { icon:'👾', desc:'Guía al personaje con mouse o dedo y esquiva hasta la meta.', start:gSecretRun }
+  'Keyboard'     : { icon:'🎹', desc:'Teclas relajantes que se escuchan y se sienten.',                 badge:'RITMO',   start:gKeyboard },
+  'Focus Tap'    : { icon:'🎯', desc:'Objetivos rápidos con racha de aciertos.',                       badge:'REFLEJOS', start:gFocusTap },
+  'Glow Duel'    : { icon:'⚡', desc:'Compite contra Capi: gana quien reaccione más rápido.',            badge:'VS CPU',   start:gGlowDuel },
+  'Neon Stack'   : { icon:'🧱', desc:'Apila bloques al milímetro antes de que gane el rival.',           badge:'RACHA',    start:gNeonStack },
+  'Target Arena' : { icon:'🏹', desc:'Puntería, combo y precisión contra un rival automático.',          badge:'VS CPU',   start:gTargetArena },
+  'Color Rush'   : { icon:'🎨', desc:'Conquista el tablero antes que Capi en una carrera de clics.',    badge:'VS CPU',   start:gColorRush },
+  'Merge Blitz'  : { icon:'💎', desc:'Une fichas iguales, sube el multiplicador y supera al CPU.',      badge:'COMBO',    start:gMergeBlitz },
+  'Lane Rush'    : { icon:'🏎️', desc:'Cambia de carril, esquiva obstáculos y gana la carrera.',          badge:'RUNNER',   start:gLaneRush },
+  'Quiz Clash'   : { icon:'🧩', desc:'Responde preguntas rápidas antes de que Capi complete el quiz.',  badge:'VS CPU',   start:gQuizClash },
+  'Word Sprint'  : { icon:'⌨️', desc:'Ordena palabras, mantén la racha y cruza la meta primero.',       badge:'VELOCIDAD',start:gWordSprint },
+  'Memory Glow'  : { icon:'🧠', desc:'Memoriza la secuencia que crece ronda a ronda.',                   badge:'MEMORIA',  start:gMemory },
+  'Food Catch'   : { icon:'🍎', desc:'Atrapa la comida que cae… ¡si atrapas una lata, pierdes!',        badge:'VS CPU',   start:gFoodCatch },
+  'Glow Canvas'  : { icon:'🪐', desc:'Dibuja patrones relajantes sin presión.',                          badge:'CREATIVO', start:gCanvas },
+  'Secret Run'   : { icon:'👾', desc:'Guía al personaje con mouse o dedo y esquiva hasta la meta.',      badge:'RUNNER',   start:gSecretRun }
 };
 function gGlowDuel(){
   const aiDelay={easy:1150,normal:850,hard:620}[difficulty]; let you=0, capi=0, round=0, aiTimer;
@@ -1326,6 +1800,183 @@ function gGlowDuel(){
   target.addEventListener('pointerdown',()=>{if(!game.active||game.paused||!target.classList.contains('duel-live'))return;you++; target.classList.remove('duel-live'); body.querySelector('#youScore').textContent=you; sfx('good'); msg.textContent='¡Punto para ti!'; if(you>=7){clearInterval(aiTimer);finishGame(you*10,45,'Ganaste el duelo contra Capi 🏆');}else setTimeout(next,240);});
   aiTimer=setInterval(()=>{if(game.paused||!game.active)return;capi++;body.querySelector('#capiScore').textContent=capi; if(capi>=7){clearInterval(aiTimer);finishGame(you*10,10,'Capi ganó esta ronda. ¡Reintenta y supéralo!');}},aiDelay);
   next(); game.cleanup=()=>clearInterval(aiTimer);
+}
+/* ---------- Juego: NEON STACK ---------- */
+function gNeonStack(){
+  const cfg={easy:{speed:155,cpu:.22},normal:{speed:205,cpu:.31},hard:{speed:260,cpu:.42}}[difficulty];
+  const body=shell('<div class="game-board stack-board"><canvas id="stackCv"></canvas></div>'+
+    '<p class="game-message">Pulsa o toca para soltar el bloque. Alinea 10 capas antes que el Rival CPU.</p>');
+  const cvs=body.querySelector('#stackCv');
+  let env=fitCanvas(cvs),ctx=env.ctx,W=env.w,H=env.h;
+  let tower=[{x:W/2-72,w:144,y:H-42}], moving=null, level=1, score=0, cpu=0;
+  let rafId=null,last=performance.now(),ended=false;
+  function resize(){env=fitCanvas(cvs);ctx=env.ctx;W=env.w;H=env.h;}
+  function nextBlock(){
+    const previous=tower[tower.length-1];
+    moving={x:20,w:Math.max(44,previous.w-(difficulty==='hard'?10:7)),y:H-42-level*26,dir:1};
+  }
+  function end(win,msg){
+    if(ended)return; ended=true; cancelAnimationFrame(rafId);
+    if(win) finishGame(score,50,msg);
+    else offerRetry(msg+' Puntuación: '+score+'.');
+  }
+  function place(){
+    if(ended||!game.active||game.paused||!moving)return;
+    const previous=tower[tower.length-1],left=Math.max(moving.x,previous.x),right=Math.min(moving.x+moving.w,previous.x+previous.w),overlap=right-left;
+    if(overlap<22){sfx('bad');end(false,'El bloque quedó fuera de la torre.');return;}
+    tower.push({x:left,w:overlap,y:moving.y});
+    score+=Math.round(overlap*.3)+level*12; level++; sfx('good');
+    if(level>10){end(true,'¡Torre perfecta! Superaste 10 capas antes que Capi 🏆');return;}
+    nextBlock();
+  }
+  function draw(){
+    const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#111a36');bg.addColorStop(1,'#0b1021');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(139,124,255,.12)';ctx.lineWidth=1;
+    for(let y=H-42;y>22;y-=26){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    tower.forEach((block,i)=>{ctx.fillStyle='hsl('+(245+i*18)+' 88% '+(66-i*.7)+'%)';ctx.fillRect(block.x,block.y,block.w,22);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fillRect(block.x,block.y,block.w,3);});
+    if(moving){ctx.fillStyle='hsl('+(170+level*14)+' 88% 66%)';ctx.shadowColor='#51e0c0';ctx.shadowBlur=18;ctx.fillRect(moving.x,moving.y,moving.w,22);ctx.shadowBlur=0;}
+    ctx.fillStyle='rgba(255,255,255,.68)';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('TU · '+level+'/10 capas',14,18);
+    ctx.textAlign='right';ctx.fillStyle='#ffb84d';ctx.fillText('CPU · '+Math.min(10,Math.floor(cpu))+'/10',W-14,18);
+    ctx.fillStyle='rgba(255,255,255,.1)';ctx.fillRect(14,25,W-28,5);ctx.fillStyle='#ffb84d';ctx.fillRect(14,25,(W-28)*Math.min(1,cpu/10),5);
+  }
+  function loop(ts){
+    if(ended||!game.active)return;
+    const dt=Math.min(.05,(ts-last)/1000);last=ts;
+    if(!game.paused){
+      moving.x+=moving.dir*cfg.speed*dt;
+      if(moving.x<=10){moving.x=10;moving.dir=1;}
+      if(moving.x+moving.w>=W-10){moving.x=W-10-moving.w;moving.dir=-1;}
+      cpu+=dt*cfg.cpu;
+      if(cpu>=10&&level<10){end(false,'El Rival CPU construyó su torre primero 🤖');return;}
+    }
+    draw();hud(score,'Capa '+Math.min(level,10)+'/10 · CPU '+Math.min(10,Math.floor(cpu))+'/10');rafId=requestAnimationFrame(loop);
+  }
+  cvs.addEventListener('pointerdown',place);
+  const kd=e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();place();}};
+  document.addEventListener('keydown',kd);body.appendChild(pauseBtn());nextBlock();hud(0,'Capa 1/10 · CPU 0/10');rafId=requestAnimationFrame(loop);
+  game.cleanup=()=>{ended=true;cancelAnimationFrame(rafId);document.removeEventListener('keydown',kd);};
+}
+/* ---------- Juego: TARGET ARENA ---------- */
+function gTargetArena(){
+  const cfg={easy:{time:38,size:58,cpu:1450},normal:{time:32,size:50,cpu:1080},hard:{time:27,size:42,cpu:820}}[difficulty];
+  const body=shell('<div class="game-board arena-board" id="targetArena"><div class="arena-score"><span>🏹 Tú <b id="arenaYou">0</b></span><span>🤖 CPU <b id="arenaCpu">0</b></span><span>⏱ <b id="arenaTime">'+cfg.time+'</b></span></div><button type="button" class="game-target arena-target" id="arenaTarget">✦</button></div>'+
+    '<p class="game-message">Acierta 20 objetivos y construye un combo. El CPU no se detiene.</p>');
+  const board=body.querySelector('#targetArena'),target=body.querySelector('#arenaTarget');
+  let you=0,cpu=0,time=cfg.time,combo=0,timer=null,cpuTimer=null,ended=false;
+  function render(){body.querySelector('#arenaYou').textContent=you;body.querySelector('#arenaCpu').textContent=cpu;body.querySelector('#arenaTime').textContent=time;hud(you,'Combo '+combo+' · Tú '+you+' / CPU '+cpu);}
+  function end(win,msg){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);target.remove();if(win)finishGame(you*10+combo*3,45,msg);else offerRetry(msg+' Tu puntuación: '+you+'.');}
+  function place(){
+    if(ended||!game.active)return;
+    target.style.width=cfg.size+'px';target.style.height=cfg.size+'px';target.style.left=(10+Math.random()*78)+'%';target.style.top=(22+Math.random()*66)+'%';target.textContent=combo>4?'⚡':'✦';
+  }
+  target.addEventListener('pointerdown',()=>{if(ended||!game.active||game.paused)return;you++;combo++;sfx('good');place();if(you>=20)end(true,'¡Arena conquistada! Tu combo dejó atrás al CPU 🏆');else render();});
+  timer=setInterval(()=>{if(ended||game.paused)return;time--;render();if(time<=0)end(you>cpu,'Tiempo. '+(you>cpu?'Ganaste por precisión 🏆':'El CPU tuvo mejor puntería 🤖'));},1000);
+  cpuTimer=setInterval(()=>{if(ended||game.paused)return;cpu++;if(cpu>=20)end(false,'El CPU llegó a 20 aciertos primero 🤖');else render();},cfg.cpu);
+  body.appendChild(pauseBtn());place();render();
+  game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);document.removeEventListener('keydown',()=>{});};
+}
+/* ---------- Juego: COLOR RUSH ---------- */
+function gColorRush(){
+  const cfg={easy:{time:32,cpu:980},normal:{time:27,cpu:760},hard:{time:23,cpu:570}}[difficulty];
+  const body=shell('<div class="game-board color-rush-board"><div class="conquest-score"><span>🎨 Tú <b id="rushYou">0</b></span><span>🤖 Capi <b id="rushCpu">0</b></span><span>⏱ <b id="rushTime">'+cfg.time+'</b></span></div><div class="conquest-grid" id="rushGrid"></div></div>'+
+    '<p class="game-message">Toma casillas libres o roba las de Capi. Quien tenga más territorio cuando acabe el tiempo gana.</p>');
+  const grid=body.querySelector('#rushGrid');let cells=[],you=0,cpu=0,time=cfg.time,timer=null,cpuTimer=null,ended=false,combo=0;
+  for(let i=0;i<36;i++){const c=document.createElement('button');c.type='button';c.className='conquest-cell';c.setAttribute('aria-label','Casilla '+(i+1));grid.appendChild(c);cells.push(c);}
+  function recount(){you=cells.filter(c=>c.dataset.owner==='you').length;cpu=cells.filter(c=>c.dataset.owner==='cpu').length;body.querySelector('#rushYou').textContent=you;body.querySelector('#rushCpu').textContent=cpu;hud(you,'Territorio · Tú '+you+' / Capi '+cpu+' · '+time+'s');}
+  function claim(c,owner){const old=c.dataset.owner;if(old===owner)return;if(old==='you')you--;if(old==='cpu')cpu--;c.dataset.owner=owner;c.classList.remove('owned-you','owned-cpu');c.classList.add(owner==='you'?'owned-you':'owned-cpu');if(owner==='you')you++;else cpu++;}
+  function end(win,msg){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);if(win)finishGame(you*12+combo*2,40,msg);else offerRetry(msg+' Territorio: '+you+' vs '+cpu+'.');}
+  cells.forEach(c=>c.addEventListener('pointerdown',()=>{if(ended||game.paused||!game.active)return;claim(c,'you');combo++;sfx('good');recount();if(you>20)end(true,'¡Dominaste el tablero! Ganaste con '+you+' casillas 🏆');}));
+  cpuTimer=setInterval(()=>{if(ended||game.paused)return;const choices=cells.filter(c=>c.dataset.owner!=='cpu');if(choices.length)claim(choices[Math.floor(Math.random()*choices.length)],'cpu');recount();if(cpu>20)end(false,'Capi tomó el control del tablero 🤖');},cfg.cpu);
+  timer=setInterval(()=>{if(ended||game.paused)return;time--;recount();if(time<=0)end(you>=cpu,'Tiempo. '+(you>=cpu?'Tu estrategia ganó 🏆':'Capi terminó con más casillas 🤖'));},1000);
+  body.appendChild(pauseBtn());recount();
+  game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);};
+}
+/* ---------- Juego: MERGE BLITZ ---------- */
+function gMergeBlitz(){
+  const cfg={easy:{time:48,cpu:7},normal:{time:42,cpu:10},hard:{time:36,cpu:13}}[difficulty],goal=420;
+  const body=shell('<div class="game-board merge-board"><div class="merge-score"><span>💎 Tú <b id="mergeYou">0</b></span><span>🤖 CPU <b id="mergeCpu">0</b></span><span>⏱ <b id="mergeTime">'+cfg.time+'</b></span></div><div class="merge-grid" id="mergeGrid"></div></div>'+
+    '<p class="game-message" id="mergeMsg">Elige dos fichas con el mismo número para fusionarlas. Llega a '+goal+' puntos antes que el CPU.</p>');
+  const grid=body.querySelector('#mergeGrid'),msg=body.querySelector('#mergeMsg');let values=[],cells=[],selected=-1,score=0,cpu=0,time=cfg.time,timer=null,cpuTimer=null,ended=false;
+  const spawn=()=>[1,1,1,2,2,4][Math.floor(Math.random()*6)];
+  for(let i=0;i<16;i++){values.push(spawn());const c=document.createElement('button');c.type='button';c.className='merge-tile';grid.appendChild(c);cells.push(c);}
+  function render(){cells.forEach((c,i)=>{const v=values[i];c.dataset.value=v;c.classList.toggle('selected',selected===i);c.innerHTML='<strong>'+v+'</strong><small>'+(selected===i?'Elegida':'Fusionar')+'</small>';});body.querySelector('#mergeYou').textContent=score;body.querySelector('#mergeCpu').textContent=cpu;body.querySelector('#mergeTime').textContent=time;hud(score,'Tú '+score+' / CPU '+cpu);}
+  function end(win,msgText){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);if(win)finishGame(score,50,msgText);else offerRetry(msgText+' Puntuación: '+score+'.');}
+  cells.forEach((c,i)=>c.addEventListener('pointerdown',()=>{if(ended||game.paused||!game.active)return;const v=values[i];if(selected<0){selected=i;msg.textContent='Ahora elige otra ficha con el mismo número.';render();return;}if(selected===i){selected=-1;render();return;}if(values[selected]===v){values[selected]=v*2;values[i]=spawn();score+=values[selected]*5+10;sfx('good');msg.textContent='¡Fusión! El multiplicador sube.';selected=-1;if(score>=goal){end(true,'¡Combo de fusión! Superaste al CPU 💎');return;}render();}else{selected=i;msg.textContent='No coinciden. Elige otra ficha del mismo valor.';render();}}));
+  cpuTimer=setInterval(()=>{if(ended||game.paused)return;cpu+=cfg.cpu;render();if(cpu>=goal)end(false,'El CPU completó su laboratorio antes 🤖');},1000);
+  timer=setInterval(()=>{if(ended||game.paused)return;time--;render();if(time<=0)end(score>=cpu,'Tiempo. '+(score>=cpu?'Tu laboratorio ganó 🏆':'El CPU terminó con más puntos 🤖'));},1000);
+  body.appendChild(pauseBtn());render();
+  game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);};
+}
+/* ---------- Juego: LANE RUSH ---------- */
+function gLaneRush(){
+  const cfg={easy:{speed:150,cpu:.38,spawn:1.1},normal:{speed:190,cpu:.52,spawn:.9},hard:{speed:235,cpu:.68,spawn:.72}}[difficulty],goal=14;
+  const body=shell('<div class="game-board lane-board"><canvas id="laneCv"></canvas></div><div class="lane-controls"><button type="button" data-lane="0">◀ Izquierda</button><button type="button" data-lane="1">Centro</button><button type="button" data-lane="2">Derecha ▶</button></div>'+
+    '<p class="game-message">Usa ← → o los botones. Esquiva '+goal+' obstáculos antes que el Rival CPU.</p>');
+  const cvs=body.querySelector('#laneCv');let env=fitCanvas(cvs),ctx=env.ctx,W=env.w,H=env.h;
+  let lane=1,score=0,cpu=0,obstacles=[],spawnT=0,rafId=null,last=performance.now(),ended=false;
+  const laneX=i=>W*(.25+i*.25);
+  function move(dir){lane=Math.max(0,Math.min(2,typeof dir==='number'?dir:lane+dir));sfx('click');}
+  function end(win,msg){if(ended)return;ended=true;cancelAnimationFrame(rafId);if(win)finishGame(score*12,45,msg);else offerRetry(msg+' Obstáculos superados: '+score+'.');}
+  function spawn(){obstacles.push({lane:Math.floor(Math.random()*3),y:-35,size:28+Math.random()*8,extra:Math.random()*45});}
+  function draw(){
+    const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#111a34');bg.addColorStop(1,'#090d1d');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(255,255,255,.045)';ctx.fillRect(W*.12,0,W*.76,H);
+    ctx.strokeStyle='rgba(139,124,255,.24)';ctx.lineWidth=2;[.375,.625].forEach(x=>{ctx.setLineDash([14,15]);ctx.beginPath();ctx.moveTo(W*x,0);ctx.lineTo(W*x,H);ctx.stroke();});ctx.setLineDash([]);
+    obstacles.forEach(o=>{ctx.font=o.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚧',laneX(o.lane),o.y);});
+    ctx.shadowColor='#51e0c0';ctx.shadowBlur=18;ctx.font='34px serif';ctx.fillText('🏎️',laneX(lane),H-42);ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('TÚ · '+score+'/'+goal,14,18);ctx.textAlign='right';ctx.fillStyle='#ffb84d';ctx.fillText('CPU · '+Math.min(goal,Math.floor(cpu))+'/'+goal,W-14,18);
+  }
+  function loop(ts){
+    if(ended||!game.active)return;const dt=Math.min(.05,(ts-last)/1000);last=ts;
+    if(!game.paused){
+      spawnT+=dt;if(spawnT>cfg.spawn){spawnT=0;spawn();}
+      cpu+=dt*cfg.cpu;obstacles.forEach(o=>o.y+=(cfg.speed+o.extra)*dt);
+      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];if(o.y>H-78&&o.y<H-23&&o.lane===lane){sfx('bad');end(false,'¡Choque! Elige otro carril.');return;}if(o.y>H+35){obstacles.splice(i,1);score++;sfx('good');if(score>=goal){end(true,'¡Carrera ganada! Dejaste al CPU atrás 🏆');return;}}}
+      if(cpu>=goal&&score<goal){end(false,'El Rival CPU cruzó primero 🤖');return;}
+    }
+    draw();hud(score,'Carrera · Tú '+score+'/'+goal+' · CPU '+Math.min(goal,Math.floor(cpu))+'/'+goal);rafId=requestAnimationFrame(loop);
+  }
+  body.querySelectorAll('[data-lane]').forEach(b=>b.addEventListener('pointerdown',()=>move(parseInt(b.dataset.lane,10))));
+  const kd=e=>{if(!game.active||game.paused)return;if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')move(-1);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')move(1);};
+  document.addEventListener('keydown',kd);body.appendChild(pauseBtn());hud(0,'Carrera · Tú 0/'+goal+' · CPU 0/'+goal);rafId=requestAnimationFrame(loop);
+  game.cleanup=()=>{ended=true;cancelAnimationFrame(rafId);document.removeEventListener('keydown',kd);};
+}
+/* ---------- Juego: QUIZ CLASH ---------- */
+function gQuizClash(){
+  const questions=[
+    {q:'¿Qué parte de una planta captura principalmente la luz?',o:['La clorofila','La raíz','La corteza','El suelo'],a:0},
+    {q:'¿Cuál es la capital del Perú?',o:['Cusco','Lima','Arequipa','Trujillo'],a:1},
+    {q:'¿Qué hace CSS en una página web?',o:['Guarda contraseñas','Controla el aspecto visual','Crea sonidos','Mide el tiempo'],a:1},
+    {q:'¿Cuál es la fórmula de la segunda ley de Newton?',o:['F = m × a','E = m ÷ c','P = a + b','V = d − t'],a:0},
+    {q:'¿Qué ayuda a estudiar mejor?',o:['Releer sin parar','Repaso activo','Dormir menos','Quitar todas las pausas'],a:1},
+    {q:'¿Qué es una hipótesis?',o:['Una pregunta sin tema','Una explicación que se puede poner a prueba','Un resultado seguro','Una opinión secreta'],a:1},
+    {q:'¿Qué opción protege mejor una cuenta?',o:['Repetir la clave','Compartir códigos','Usar 2 pasos','Publicar la contraseña'],a:2},
+    {q:'Cuando una emoción es intensa, ¿qué paso es útil?',o:['Negarla siempre','Hacer una pausa segura','Insultar','Aislarse sin avisar'],a:1}
+  ];
+  const cfg={easy:{cpu:2350,accuracy:.58},normal:{cpu:1900,accuracy:.7},hard:{cpu:1500,accuracy:.82}}[difficulty];
+  const body=shell('<div class="game-board quiz-board"><div class="quiz-score"><span>🧩 Tú <b id="quizYou">0</b></span><span>🤖 CPU <b id="quizCpu">0</b></span><span>❔ <b id="quizRound">1</b>/'+questions.length+'</span></div><div class="quiz-card"><h3 id="quizQuestion"></h3><div class="quiz-options" id="quizOptions"></div><p class="quiz-message" id="quizMsg">Elige una respuesta. Capi también está resolviendo.</p></div></div>'+
+    '<p class="game-message">Responde rápido y con calma. Gana quien acierte más preguntas.</p>');
+  const question=body.querySelector('#quizQuestion'),options=body.querySelector('#quizOptions'),msg=body.querySelector('#quizMsg');let index=0,you=0,cpu=0,cpuIndex=0,cpuTimer=null,ended=false;
+  function render(){if(ended)return;const item=questions[index];question.textContent=item.q;body.querySelector('#quizYou').textContent=you;body.querySelector('#quizCpu').textContent=cpu;body.querySelector('#quizRound').textContent=Math.min(index+1,questions.length);hud(you,'Pregunta '+Math.min(index+1,questions.length)+'/'+questions.length+' · CPU '+cpu);options.innerHTML='';item.o.forEach((choice,i)=>{const b=document.createElement('button');b.type='button';b.className='quiz-option';b.textContent=choice;b.addEventListener('click',()=>answer(i));options.appendChild(b);});}
+  function end(win,text){if(ended)return;ended=true;clearInterval(cpuTimer);if(win)finishGame(you*20,45,text);else offerRetry(text+' Resultado: '+you+'–'+cpu+'.');}
+  function answer(choice){if(ended||game.paused||!game.active)return;const item=questions[index],correct=choice===item.a;options.querySelectorAll('button').forEach(b=>b.disabled=true);if(correct){you++;sfx('good');msg.textContent='¡Correcto!';}else{sfx('bad');msg.textContent='Casi. La respuesta correcta era: '+item.o[item.a];}index++;if(index>=questions.length){end(you>=cpu,'¡Quiz completado! Tu conocimiento venció al CPU 🏆');return;}setTimeout(render,260);}
+  cpuTimer=setInterval(()=>{if(ended||game.paused)return;const item=questions[cpuIndex%questions.length];if(Math.random()<cfg.accuracy)cpu++;cpuIndex++;if(cpuIndex>=questions.length){end(you>=cpu,'El CPU terminó el quiz primero 🤖');return;}body.querySelector('#quizCpu').textContent=cpu;hud(you,'Pregunta '+Math.min(index+1,questions.length)+'/'+questions.length+' · CPU '+cpu);},cfg.cpu);
+  body.appendChild(pauseBtn());render();game.cleanup=()=>{ended=true;clearInterval(cpuTimer);};
+}
+/* ---------- Juego: WORD SPRINT ---------- */
+function gWordSprint(){
+  const cfg={easy:{time:55,cpu:1.9},normal:{time:45,cpu:2.35},hard:{time:37,cpu:2.85}}[difficulty],goal=8;
+  const words=['calma','enfoque','respirar','planeta','memoria','energia','amistad','valiente','equilibrio','sonrisa','curiosidad','avance'];
+  const body=shell('<div class="game-board word-board"><div class="word-score"><span>⌨️ Tú <b id="wordYou">0</b></span><span>🤖 CPU <b id="wordCpu">0</b></span><span>⏱ <b id="wordTime">'+cfg.time+'</b></span></div><div class="word-card"><small>ORDENA LAS LETRAS</small><strong id="wordScramble"></strong><form id="wordForm"><input id="wordInput" autocomplete="off" autocapitalize="none" placeholder="Escribe la palabra"><button class="btn primary" type="submit">Comprobar</button></form><p id="wordMsg">Cruza la meta de '+goal+' palabras antes que el CPU.</p></div></div>'+
+    '<p class="game-message">Cada acierto aumenta tu racha. Puedes usar teclado o tocar el botón.</p>');
+  const scrambleEl=body.querySelector('#wordScramble'),input=body.querySelector('#wordInput'),msg=body.querySelector('#wordMsg');let round=0,you=0,cpu=0,time=cfg.time,current='',timer=null,cpuTimer=null,ended=false;
+  function mix(word){let out=word.split('');for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}const result=out.join('');return result===word?word.slice(1)+word[0]:result;}
+  function next(){current=words[(round*3+Math.floor(Math.random()*3))%words.length];scrambleEl.textContent=mix(current).toUpperCase();input.value='';input.focus();}
+  function end(win,text){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);if(win)finishGame(you*25,45,text);else offerRetry(text+' Resultado: '+you+'–'+cpu+'.');}
+  body.querySelector('#wordForm').addEventListener('submit',e=>{e.preventDefault();if(ended||game.paused)return;const answer=normalText(input.value).trim();if(answer===current){you++;round++;sfx('good');msg.textContent='¡Correcta! Mantén la racha.';if(you>=goal){end(true,'¡Sprint completado! Llegaste antes que el CPU 🏆');return;}next();}else{msg.textContent='Todavía no. Mira las letras y prueba otra vez.';}hud(you,'Palabras '+you+'/'+goal+' · CPU '+Math.floor(cpu));});
+  cpuTimer=setInterval(()=>{if(ended||game.paused)return;cpu++;if(cpu>=goal){end(false,'El CPU terminó su sprint primero 🤖');return;}hud(you,'Palabras '+you+'/'+goal+' · CPU '+Math.floor(cpu));},cfg.cpu*1000);
+  timer=setInterval(()=>{if(ended||game.paused)return;time--;body.querySelector('#wordTime').textContent=time;if(time<=0)end(you>=cpu,'Tiempo. '+(you>=cpu?'Tu velocidad ganó 🏆':'El CPU fue más rápido 🤖'));},1000);
+  body.appendChild(pauseBtn());next();hud(0,'Palabras 0/'+goal+' · CPU 0');game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);};
 }
 function arcadeInit(){
   renderGames();
@@ -1342,7 +1993,7 @@ function renderGames(){
   el.innerHTML = Object.keys(games).map(name => {
     const g = games[name];
     return '<button type="button" class="game-card" data-game="'+name+'">'+
-      '<div class="emoji">'+g.icon+'</div><h3>'+name+'</h3><p>'+g.desc+'</p>'+
+      '<div class="game-card-top"><div class="emoji">'+g.icon+'</div>'+(g.badge?'<span class="game-badge">'+g.badge+'</span>':'')+'</div><h3>'+name+'</h3><p>'+g.desc+'</p>'+
       '<div class="high">Récord: '+(state.highScores[name]||0)+'</div></button>';
   }).join('');
   el.querySelectorAll('[data-game]').forEach(b =>
@@ -1914,6 +2565,9 @@ function settingsInit(){
   $('#resetData').addEventListener('click', () => {
     if(confirm('¿Eliminar todos los datos locales de Mind Glow?')){
       localStorage.removeItem(KEY);
+      localStorage.removeItem(USERS_KEY);
+      localStorage.removeItem(ACTIVE_USER_KEY);
+      localStorage.removeItem(AI_DB_KEY);
       location.reload();
     }
   });
@@ -1939,6 +2593,10 @@ function topbarInit(){
     showView('home');
     ensureStreak();
     sfx('good');
+  });
+  // En pantallas pequeñas o con teclado, Enter también permite pasar la portada.
+  $('#enterBtn').addEventListener('keydown', e => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#enterBtn').click(); }
   });
   $('#gameClose').addEventListener('click', closeGame);
   $('#gameModal .modal-backdrop').addEventListener('click', () => {

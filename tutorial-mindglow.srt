@@ -1,0 +1,42 @@
+1
+00:00:00,000 --> 00:00:03,100
+MIND GLOW 3.0 · GUÍA EDUCATIVA
+De una idea a una experiencia.
+Un recorrido breve por la app, el creador de juegos 3D, los controles y el guardado de tu progreso.
+
+2
+00:00:03,100 --> 00:00:06,200
+01 · PRIMER PASO
+Entra y oriéntate.
+Pulsa “Entrar a Mind Glow” para abrir el panel. Desde Inicio puedes saltar a cualquier herramienta.
+
+3
+00:00:06,200 --> 00:00:09,300
+02 · TU GUÍA LOCAL
+Habla con Glow AI.
+Escribe una petición con tus propias palabras. Organiza sesiones, pide ideas o prepara un juego 3D.
+
+4
+00:00:09,300 --> 00:00:12,400
+03 · GAME STUDIO
+Describe. Genera. Juega.
+Cuenta qué quieres crear y pulsa “Generar mundo 3D”. El motor local monta la escena, los objetos y la meta.
+
+5
+00:00:12,400 --> 00:00:15,500
+04 · CONTROLES
+Muévete en primera persona.
+PC: WASD o flechas · arrastra para mirar · ESPACIO para saltar. Móvil o tablet: usa el D-pad y el botón de salto.
+
+6
+00:00:15,500 --> 00:00:18,600
+05 · PROGRESO
+Guarda tu avance.
+La app guarda tu estado en el navegador automáticamente. “Guardar carpeta” exporta un proyecto; “Importar” lo recupera.
+
+7
+00:00:18,600 --> 00:00:21,700
+06 · PUBLICACIÓN
+Comparte Mind Glow.
+La web está publicada y lista para cualquier dispositivo. Abre el enlace corto y empieza tu siguiente sesión.
+

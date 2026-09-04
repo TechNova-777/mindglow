@@ -35,7 +35,9 @@
       <p class="eyebrow">MIND GLOW 3.0 · IMPULSO MENTAL</p>
       <h1>Tu mente también<br><span>merece una experiencia.</span></h1>
       <p class="welcome-copy">Calma, concentración, música original de Mind Glow, juegos y una IA amigable. Hecho por estudiantes, para estudiantes.</p>
-      <button class="btn primary xl" id="enterBtn">Entrar a Mind Glow <span>↗</span></button>
+      <div class="welcome-actions">
+        <button class="btn primary xl" id="enterBtn">Entrar a Mind Glow <span>↗</span></button>
+      </div>
       <div class="trust-row"><span>⚡ Gratis siempre</span><span>🔒 Tus datos son tuyos</span><span>🎧 Audio en vivo</span></div>
     </div>
   </section>
@@ -56,7 +58,7 @@
           <div class="xp-track"><i id="xpBar"></i></div>
           <small id="xpHint">100 XP para el siguiente nivel</small>
         </div>
-        <button class="nav-item" data-view="settings"><span>⚙</span><b>Configuración</b></button>
+        <button class="nav-item" data-view="settings"><span class="nav-logo nav-logo-settings" aria-hidden="true">⚙</span><b>Ajustes</b></button>
       </div>
     </aside>
 
@@ -70,7 +72,7 @@
           <span id="streakChip" class="chip-streak" title="Días seguidos usando Mind Glow">🔥 <b id="streakNum">0</b></span>
           <button id="donateBtn" class="icon-btn" title="Donaciones">💜</button>
           <button id="soundBtn" class="icon-btn" title="Sonido">🔊</button>
-          <button id="profileBtn" class="avatar" title="Perfil">J</button>
+        <button id="profileBtn" class="avatar" title="Mi Perfil">J</button>
         </div>
       </header>
 
@@ -121,13 +123,13 @@
 
           <div class="section-head"><div><p class="eyebrow">ACCESO RÁPIDO</p><h3>¿Qué necesitas ahora?</h3></div></div>
           <div class="quick-grid">
-            <button class="quick-card studio-quick-card" data-view="studio"><span>◈</span><b>Crear un juego</b><small>Game Studio 3D</small></button>
-            <button class="quick-card" data-view="calm"><span>🌿</span><b>Calmarme</b><small>Respiración + sonido</small></button>
-            <button class="quick-card" data-view="focus"><span>🎯</span><b>Concentrarme</b><small>Pomodoro flexible</small></button>
-            <button class="quick-card" data-view="arcade"><span>🎮</span><b>Despejarme</b><small>Arcade + secretos</small></button>
-            <button class="quick-card" data-view="space"><span>🌌</span><b>Glow Space</b><small>Tu universo evoluciona</small></button>
-            <button class="quick-card" data-view="chat"><span>💬</span><b>Sala Glow</b><small>Chat + stickers en vivo</small></button>
-            <button class="quick-card" data-view="wellness"><span>💚</span><b>Bienestar+</b><small>Test + progreso</small></button>
+            <button class="quick-card studio-quick-card" data-view="studio"><span>◈</span><b>Crear un juego</b><small>Glow Forge 3D</small></button>
+            <button class="quick-card" data-view="calm"><span>🌿</span><b>Calmarme</b><small>Zen Calma · respiración + sonido</small></button>
+            <button class="quick-card" data-view="focus"><span>🎯</span><b>Concentrarme</b><small>Deep Focus · Pomodoro flexible</small></button>
+            <button class="quick-card" data-view="arcade"><span>🎮</span><b>Despejarme</b><small>Arcade Rush · retos y récords</small></button>
+            <button class="quick-card" data-view="space"><span>🌌</span><b>Universo Glow</b><small>Tu universo evoluciona</small></button>
+            <button class="quick-card" data-view="chat"><span>💬</span><b>Comunidad Glow</b><small>Chat + stickers en vivo</small></button>
+            <button class="quick-card" data-view="wellness"><span>💚</span><b>Balance+</b><small>Test + progreso</small></button>
           </div>
 
           <div class="glass panel streak-week">
@@ -167,7 +169,7 @@
 
         <!-- ===== GLOW AI ===== -->
         <section class="view" id="view-ai">
-          <div class="page-title"><p class="eyebrow">ASISTENTE PERSONAL</p><h1>Glow <span>AI</span></h1><p>Una IA local de bienestar con memoria contextual, acciones rápidas y respuestas adaptativas.</p></div>
+          <div class="page-title"><p class="eyebrow">ASISTENTE PERSONAL</p><h1>Glow <span>AI</span></h1><p>Una IA que escucha el lenguaje emocional, responde con empatía y ofrece apoyo seguro sin diagnosticar.</p></div>
           <div class="ai-layout">
             <div class="glass ai-shell">
               <div class="ai-head">
@@ -175,7 +177,7 @@
                 <div><b>Glow AI 3.0</b><small id="aiStatus">Lista para escucharte</small></div>
                 <span class="online-dot"></span>
               </div>
-              <div class="ai-private-note"><span>🔒</span> Modo local: tus mensajes se procesan en este dispositivo. No necesita API key.</div>
+              <div class="ai-private-note"><span>🔒</span> La detección emocional y las respuestas de crisis se procesan localmente. Las preguntas abiertas pueden enviarse al proveedor externo si el servidor está configurado; no escribas datos sensibles.</div>
               <div id="chatMessages" class="chat"></div>
               <div class="ai-actions">
                 <button data-prompt="Estoy estresado por las tareas">Estrés</button>
@@ -208,7 +210,7 @@
 
         <!-- ===== CALM ===== -->
         <section class="view" id="view-calm">
-          <div class="page-title"><p class="eyebrow">GLOW CALM</p><h1>Vuelve a tu <span>centro.</span></h1><p>Respiración guiada, sonidos ambientales y música original de Mind Glow.</p></div>
+          <div class="page-title"><p class="eyebrow">ZEN CALMA</p><h1>Vuelve a tu <span>centro.</span></h1><p>Respiración guiada, sonidos ambientales y música original de Mind Glow.</p></div>
           <div class="calm-grid">
             <div class="glass breathing panel-large">
               <div id="breathCircle" class="breath-circle"><div><span id="breathPhase">LISTO</span><b id="breathTimer">01:00</b></div></div>
@@ -251,7 +253,7 @@
         <section class="view" id="view-wellness">
           <div class="page-title">
             <p class="eyebrow">CONOCIMIENTO REAL</p>
-            <h1>Bienestar<span>+</span> — conócete, mejórate.</h1>
+            <h1>Balance<span>+</span> — conócete, mejórate.</h1>
             <p>Un test rápido de 10 indicadores (sueño, concentración y apoyo social), tu progreso en el tiempo y técnicas respaldadas por la ciencia. Sin diagnósticos: solo una brújula para tu día.</p>
           </div>
 
@@ -311,7 +313,7 @@
         </section>
 
         <section class="view" id="view-arcade">
-          <div class="page-title"><p class="eyebrow">GLOW ARCADE · V3</p><h1>Juega, <span>descubre.</span></h1><p>Mecánicas limpias, reintentos justos y secretos. Pulsa <b>K</b> durante un juego para descubrir algo.</p></div>
+          <div class="page-title"><p class="eyebrow">GLOW ARCADE · V4</p><h1>Juega, <span>compite.</span></h1><p>Retos propios de ritmo, puntería, estrategia, memoria y fusión. Supera tu récord o gana al Rival CPU; pulsa <b>K</b> para descubrir un secreto.</p></div>
           <div class="arcade-toolbar glass">
             <div class="difficulty" id="difficulty">
               <button class="active" data-level="easy">Fácil</button>
@@ -517,7 +519,7 @@
 
         <!-- ===== SPACE ===== -->
         <section class="view" id="view-space">
-          <div class="page-title"><p class="eyebrow">GLOW SPACE</p><h1>Tu universo <span>crece contigo.</span></h1><p>Tu actividad desbloquea nuevas capas del espacio.</p></div>
+          <div class="page-title"><p class="eyebrow">UNIVERSO GLOW</p><h1>Tu universo <span>crece contigo.</span></h1><p>Tu actividad desbloquea nuevas capas del espacio.</p></div>
           <div class="space glass">
             <canvas id="spaceCanvas"></canvas>
             <div class="space-caption">Nivel <b id="spaceLevel">1</b> · <b id="spaceXP">0</b> XP<span id="spaceUnlock"></span></div>
@@ -554,7 +556,7 @@
         <section class="view" id="view-chat">
           <div class="page-title">
             <p class="eyebrow">COMUNIDAD EN VIVO</p>
-            <h1>Sala <span>Glow.</span></h1>
+            <h1>Comunidad <span>Glow.</span></h1>
             <p>Chat GLOBAL en tiempo real: los mensajes viajan por internet — abre Mind Glow en otro celular o computador y conversen en vivo. Sin registros, con stickers gigantes.</p>
           </div>
           <div class="glass panel room-wrap">
@@ -574,7 +576,7 @@
 
         <!-- ===== PROFILE ===== -->
         <section class="view" id="view-profile">
-          <div class="page-title"><p class="eyebrow">MY GLOW</p><h1>Tu progreso, <span>a tu ritmo.</span></h1></div>
+          <div class="page-title"><p class="eyebrow">MI GLOW</p><h1>Tu progreso, <span>a tu ritmo.</span></h1></div>
           <div class="profile-grid">
             <div class="glass profile-card">
               <div class="big-avatar" id="bigAvatar">J</div>

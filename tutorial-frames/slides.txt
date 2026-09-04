@@ -1,0 +1,15 @@
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-01.png'
+duration 3.1
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-02.png'
+duration 3.1
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-03.png'
+duration 3.1
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-04.png'
+duration 3.1
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-05.png'
+duration 3.1
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-06.png'
+duration 3.1
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-07.png'
+duration 3.1
+file 'C:/Users/JACK PC/OneDrive/Datos adjuntos/Desktop/web-emprendimiento/tutorial-frames/slide-07.png'
