@@ -7,9 +7,12 @@
  * proveedores que expongan el mismo formato.
  */
 const DEFAULT_PROVIDER_URL = "https://api.openai.com/v1/chat/completions";
+const DEFAULT_IMAGE_URL = "https://api.openai.com/v1/images/generations";
 const MAX_MESSAGE = 4000;
+const MAX_IMAGE_PROMPT = 1600;
 const RATE_WINDOW_MS = 60 * 1000;
 const RATE_LIMIT = 20;
+const IMAGE_RATE_LIMIT = 4;
 const rateStore = new Map();
 
 function text(value, max){
@@ -29,13 +32,35 @@ function extractAnswer(data){
   return typeof legacy === "string" ? legacy.trim() : "";
 }
 
-function rateAllowed(req){
+function extractImage(data){
+  const item = data && Array.isArray(data.data) ? data.data[0] : null;
+  if(!item) return {url:"", revisedPrompt:""};
+  if(typeof item.url === "string" && /^https?:\/\//i.test(item.url))
+    return {url:item.url, revisedPrompt:text(item.revised_prompt, 500)};
+  if(typeof item.b64_json === "string" && item.b64_json.length)
+    return {url:"data:image/png;base64,"+item.b64_json, revisedPrompt:text(item.revised_prompt, 500)};
+  return {url:"", revisedPrompt:""};
+}
+
+function buildImagePrompt(prompt, style){
+  return [
+    "Create premium key art for Mind Glow, a youth-focused digital wellbeing and creativity experience.",
+    "Main idea and subject: "+prompt,
+    "Visual direction: "+(style || "cinematic digital illustration"),
+    "Use art-director-level composition, a clear focal point, cinematic depth, natural visual hierarchy, refined materials, believable light, rich micro-detail and a polished editorial finish.",
+    "Use a luminous midnight palette with violet, turquoise and restrained warm-gold highlights; make it hopeful, calm, imaginative and emotionally resonant.",
+    "No readable text, no watermark, no third-party logos, no copied characters or existing franchises."
+  ].join(" ");
+}
+
+function rateAllowed(req, limit){
+  limit = Number.isFinite(limit) ? limit : RATE_LIMIT;
   const headers = req.headers || {};
   const forwarded = headers["x-forwarded-for"] || headers["x-real-ip"] || "unknown";
   const ip = String(forwarded).split(",")[0].trim().slice(0,80);
   const now = Date.now();
   const recent = (rateStore.get(ip) || []).filter(time => now - time < RATE_WINDOW_MS);
-  if(recent.length >= RATE_LIMIT) return false;
+  if(recent.length >= limit) return false;
   recent.push(now);
   rateStore.set(ip, recent);
   if(rateStore.size > 1000) rateStore.clear();
@@ -81,15 +106,55 @@ module.exports = async function handler(req, res){
   if(req.method !== "POST") return json(res, 405, {error:"METHOD_NOT_ALLOWED"});
   if(process.env.ALLOWED_ORIGIN && headers.origin && headers.origin !== process.env.ALLOWED_ORIGIN)
     return json(res, 403, {error:"ORIGIN_NOT_ALLOWED"});
-  if(!rateAllowed(req)) return json(res, 429, {error:"RATE_LIMITED", message:"Demasiadas consultas. Inténtalo de nuevo en un minuto."});
-
-  const apiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
-  if(!apiKey) return json(res, 503, {error:"AI_NOT_CONFIGURED", message:"Configura AI_API_KEY en el servidor."});
 
   let body = req.body || {};
   if(typeof body === "string"){
     try{ body = JSON.parse(body); }catch(e){ body = {}; }
   }
+  if(!body || typeof body !== "object" || Array.isArray(body)) body = {};
+  const mode = body && body.mode === "image" ? "image" : "chat";
+  if(!rateAllowed(req, mode === "image" ? IMAGE_RATE_LIMIT : RATE_LIMIT))
+    return json(res, 429, {error:"RATE_LIMITED", message:"Demasiadas consultas. Inténtalo de nuevo en un minuto."});
+
+  const apiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+  if(!apiKey) return json(res, 503, {error:mode === "image" ? "AI_IMAGE_NOT_CONFIGURED" : "AI_NOT_CONFIGURED", message:"Configura AI_API_KEY en el servidor."});
+
+  if(mode === "image"){
+    const prompt = text(body.prompt, MAX_IMAGE_PROMPT);
+    if(!prompt) return json(res, 400, {error:"IMAGE_PROMPT_REQUIRED"});
+    const imageUrl = process.env.AI_IMAGE_URL || DEFAULT_IMAGE_URL;
+    const imageModel = process.env.AI_IMAGE_MODEL || "gpt-image-2.5-sunburst";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 45000);
+    try{
+      const upstream = await fetch(imageUrl, {
+        method:"POST",
+        headers:{"Content-Type":"application/json", "Authorization":"Bearer "+apiKey},
+        body:JSON.stringify({
+          model:imageModel,
+          prompt:buildImagePrompt(prompt, text(body.style, 120)),
+          size:process.env.AI_IMAGE_SIZE || "1024x1024",
+          quality:process.env.AI_IMAGE_QUALITY || "high"
+        }),
+        signal:controller.signal
+      });
+      const data = await upstream.json().catch(() => ({}));
+      if(!upstream.ok){
+        console.error("AI image provider error", upstream.status, data && data.error ? data.error : "unknown");
+        return json(res, 502, {error:"AI_IMAGE_PROVIDER_ERROR", message:"El proveedor de imágenes no respondió correctamente."});
+      }
+      const image = extractImage(data);
+      if(!image.url) return json(res, 502, {error:"AI_IMAGE_EMPTY_RESPONSE", message:"El proveedor no devolvió una imagen."});
+      return json(res, 200, {imageUrl:image.url, revisedPrompt:image.revisedPrompt, source:"external-image-ai", model:imageModel});
+    }catch(error){
+      const timeout = error && error.name === "AbortError";
+      console.error("AI image gateway error", timeout ? "timeout" : error.message);
+      return json(res, 502, {error:timeout ? "AI_IMAGE_TIMEOUT" : "AI_IMAGE_UNAVAILABLE", message:"No se pudo crear la imagen."});
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
   const message = text(body.message, MAX_MESSAGE);
   if(!message) return json(res, 400, {error:"MESSAGE_REQUIRED"});
 
@@ -103,8 +168,11 @@ module.exports = async function handler(req, res){
   const sourceContext = sources.length ? "\nFuentes recuperadas para esta pregunta. Úsalas como evidencia y no atribuyas a ellas datos que no contienen:\n" +
     sources.map((source, index) => "["+(index+1)+"] "+source.title+" — "+source.url+"\n"+source.snippet).join("\n") : "";
   const system = [
-    "Eres el motor externo de Glow AI, un asistente educativo y de bienestar para estudiantes.",
-    "Responde en español claro, amable y directo. Puedes responder preguntas abiertas de cultura, ciencia, tecnología, matemáticas, idiomas y estudio.",
+    "Eres Glow AI, el asistente premium de Mind Glow: inteligente, claro, cálido, preciso y útil como un asistente conversacional de primer nivel.",
+    "Responde en español natural, con excelente comprensión del contexto. Puedes resolver preguntas abiertas de cultura, ciencia, tecnología, matemáticas, idiomas, estudio, escritura y creatividad.",
+    "Piensa el problema antes de responder, verifica supuestos y entrega una respuesta autosuficiente. No muestres tu cadena de pensamiento privada: ofrece solo conclusiones, pasos verificables y una explicación breve cuando ayude a aprender.",
+    "Adapta la profundidad a la pregunta: directo para algo simple, estructurado para algo complejo. Usa títulos o listas solo cuando mejoren la claridad; evita relleno, frases genéricas, repeticiones y emojis excesivos.",
+    "Si la persona pide una decisión, comparación, plan o texto, toma iniciativa y entrega una propuesta concreta con opciones y trade-offs. Haz como máximo una pregunta de aclaración y solo si realmente cambia la respuesta.",
     "Cuando una persona comparte una emoción, refleja lo que parece estar sintiendo con lenguaje tentativo, valida sin exagerar, haz como máximo una pregunta suave y ofrece un paso pequeño y seguro. No diagnostiques ni afirmes saber exactamente cómo se siente.",
     "Explica el razonamiento cuando ayude a aprender, pero no inventes hechos, fuentes, cifras ni actualidad. Si una pregunta depende de noticias o datos que no puedes verificar, dilo claramente.",
     "No sustituyas a profesionales en salud, legal o finanzas. Ante peligro, violencia o ideas de hacerse daño, recomienda buscar de inmediato a un adulto de confianza y servicios de emergencia locales.",
@@ -116,7 +184,19 @@ module.exports = async function handler(req, res){
   ].filter(Boolean).join("\n");
 
   const providerUrl = process.env.AI_API_URL || DEFAULT_PROVIDER_URL;
-  const model = process.env.AI_MODEL || "gpt-4o-mini";
+  const model = process.env.AI_MODEL || "chat-latest";
+  const reasoningModel = /^(gpt-5(?:\.\d+)?|gpt-6(?:[.-].*)?)/i.test(model);
+  const requestBody = {
+    model,
+    messages:[{role:"system",content:system}].concat(history).concat([{role:"user",content:message}])
+  };
+  if(reasoningModel){
+    requestBody.reasoning_effort = process.env.AI_REASONING_EFFORT || "medium";
+    requestBody.max_completion_tokens = Number(process.env.AI_MAX_TOKENS) || 1400;
+  }else{
+    requestBody.temperature = Number(process.env.AI_TEMPERATURE) || 0.2;
+    requestBody.max_tokens = Number(process.env.AI_MAX_TOKENS) || 1200;
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20000);
 
@@ -124,12 +204,7 @@ module.exports = async function handler(req, res){
     const upstream = await fetch(providerUrl, {
       method:"POST",
       headers:{"Content-Type":"application/json", "Authorization":"Bearer "+apiKey},
-      body:JSON.stringify({
-        model,
-        temperature:0.2,
-        max_tokens:700,
-        messages:[{role:"system",content:system}].concat(history).concat([{role:"user",content:message}])
-      }),
+      body:JSON.stringify(requestBody),
       signal:controller.signal
     });
     const data = await upstream.json().catch(() => ({}));

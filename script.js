@@ -298,7 +298,7 @@ function showView(v){
   $('#pageTitle').innerHTML = navItem
     ? '<span class="page-title-logo page-title-logo-'+navItem[0]+'" aria-hidden="true">'+navItem[1]+'</span>'+esc(navItem[2])
     : '<span class="page-title-logo page-title-logo-settings" aria-hidden="true">⚙</span>Configuración';
-  $('#pageKicker').textContent = 'MIND GLOW 3.0 · ' + (labels[v]||'').toUpperCase();
+  $('#pageKicker').textContent = 'MIND GLOW · SIGNATURE · ' + (labels[v]||'').toUpperCase();
   if(v === 'tasks')   renderTasks();
   if(v === 'journal') renderJournal();
   if(v === 'school')  renderTeam();
@@ -600,7 +600,8 @@ function addKnowledgeEntry(entry){
 }
 window.GlowAIKnowledge = {search:knowledgeSearch, searchMany:knowledgeSearchMany, add:addKnowledgeEntry, list:() => aiDatabase.documents.slice()};
 
-const LOCAL_AI_INTENTS = new Set(['math','time','date','coin','dice','choose','panic','stress','focus','exam','sleep','calm','sad','lazy','progress','joke','fact','music','hello','thanks','fun','something','capabilities','about','game-studio','art','safety','emergency']);
+/* Solo dejamos local lo determinista o sensible. El resto puede aprovechar el modelo premium. */
+const LOCAL_AI_INTENTS = new Set(['math','time','date','coin','dice','choose','panic','art','safety','emergency']);
 const LOCAL_PRIVATE_KNOWLEDGE = new Set(['bienestar','seguridad','mind glow']);
 const AI_FALLBACKS = [
   {text:'Quiero darte una respuesta útil y no inventar. Puedes decirme el tema y qué necesitas exactamente, o elegir una opción para avanzar ahora.',actions:[['Respirar en Calma','calm'],['Organizar Tareas','tasks'],['Abrir Bienestar','wellness']]},
@@ -698,7 +699,7 @@ function aiInit(){
     }
     box.appendChild(d); box.scrollTop = box.scrollHeight;
   }
-  const welcome = () => 'Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal local.\nPuedo reconocer señales emocionales en lo que escribes, responder con empatía y ofrecer pasos seguros sin diagnosticarte. También tengo una base de conocimiento de estudio, ciencia, bienestar, seguridad digital y Mind Glow.\nCuando el servidor está configurado, consulto un proveedor externo para preguntas abiertas. No invento datos: si no conozco algo o no hay conexión, te lo diré. ¿Cómo te sientes hoy?';
+  const welcome = () => 'Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal local.\nPuedo reconocer señales emocionales en lo que escribes, responder con empatía y ofrecer pasos seguros sin diagnosticarte. También tengo una base de conocimiento de estudio, ciencia, bienestar, seguridad digital y Mind Glow.\nCuando el servidor está configurado, consulto un proveedor externo para preguntas abiertas y puedo crear imágenes originales con Glow Art. No invento datos: si no conozco algo o no hay conexión, te lo diré. ¿Cómo te sientes hoy?';
   window.refreshGlowAI = () => {
     box.innerHTML = '';
     add(welcome(),'ai');
@@ -758,6 +759,7 @@ function aiInit(){
     let kbId = null;
     let actions = [];
     let sources = [];
+    let artPrompt = '';
     const h = new Date().getHours();
     const saludo = h<12 ? 'Buenos días' : h<19 ? 'Buenas tardes' : 'Buenas noches';
     const pending=state.tasks.filter(t=>!t.done).length, mood=state.mood ? state.mood.label.toLowerCase() : '';
@@ -803,14 +805,14 @@ function aiInit(){
     } else if(/explica|explicame|no entiendo|que significa|como aprendo/.test(s)){
       intent='explain'; reply='Vamos por partes: dime el tema exacto y tu curso. Te lo explicaré con un ejemplo sencillo, una comparación y una mini pregunta; no solo te daré la respuesta.';
     } else if(/ayuda|opciones|que puedes hacer|funciones/.test(s)){
-      intent='capabilities'; reply='Puedo crear mundos 3D desde texto, organizar tareas, preparar Focus, guiar respiración, calcular, resumir textos y revisar tu progreso. También puedo editar tu juego con instrucciones como “añade enemigos” o “cambia el escenario”.';
+      intent='capabilities'; reply='Puedo crear mundos 3D desde texto, generar imágenes originales de Mind Glow, organizar tareas, preparar Focus, guiar respiración, calcular, resumir textos y revisar tu progreso. También puedo editar tu juego con instrucciones como “añade enemigos” o “cambia el escenario”.';
       actions=[['◈ Crear juego 3D','studio'],['✓ Organizarme','tasks'],['◷ Concentrarme','focus']];
-    } else if(/dibuj|hazme una imagen|imagen de|arte de/.test(s)){
+    } else if(/dibuj|hazme una imagen|genera(r)? .*imagen|imagen de|arte de/.test(s)){
       intent='art';
-      const tema = text.replace(/dibuja(me)?|dibujar|hazme una imagen de|hazme.*imagen|imagen de|arte de/gi,'').trim() || 'tu idea';
-      reply='🎨 Modo Glow Art activado. Generé esta pieza ÚNICA e irrepetible inspirada en "'+tema+'". Cada prompt crea un arte diferente — pídeme otro.';
+      const tema = text.replace(/dibuja(me)?|dibujar|hazme una imagen de|hazme.*imagen|genera(r)?(me)?\s+(una\s+)?imagen(?:\s+de)?|imagen de|arte de/gi,'').trim() || 'tu idea';
+      artPrompt = tema;
+      reply='🎨 Modo Glow Art activado. Voy a convertir esa idea en una imagen original de Mind Glow. Cada prompt puede explorar una dirección visual distinta.';
       actions=[['✦ Hablar más con la IA','ai']];
-      setTimeout(() => aiArtBubble(tema), 150);
     } else if(/guia|no se que hacer|plan para hoy|plan de estudio|plan rapido|ayudame a organizar|que hago ahora/.test(s)){
       intent='guide'; reply=wPlan();
       actions=[['✓ Ver tareas','tasks'],['◷ Ir a Focus','focus'],['💚 Hacer el test','wellness']];
@@ -921,7 +923,7 @@ function aiInit(){
     $('#aiContext').textContent = 'Última intención: '+intent+' · Nivel '+state.level+
       ' ('+state.xp+' XP) · Racha '+state.streak+'d · '+(state.mood ? 'ánimo: '+state.mood.label : 'sin check-in')+
       (emotionSignal && emotionSignal.id !== 'crisis' ? ' · emoción detectada: '+emotionSignal.label : '');
-    return [reply, actions, {intent:intent, kbId:kbId, source:'local', knowledge:knowledgeHit ? {
+    return [reply, actions, {intent:intent, kbId:kbId, artPrompt:artPrompt, source:'local', knowledge:knowledgeHit ? {
       title:knowledgeHit.title, category:knowledgeHit.category, answer:knowledgeHit.answer
     } : null, emotion:emotionSignal, sources:sources}];
   }
@@ -938,14 +940,35 @@ function aiInit(){
       const out = await askExternalAI(t, localOut, guard);
       if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
       add(out[0],'ai',out[1],out[2] && out[2].sources);
+      if(out[2] && out[2].intent === 'art' && out[2].artPrompt)
+        generateGlowImage(out[2].artPrompt, 'ilustración digital cinematográfica', guard);
       $('#aiStatus').textContent = out[2] && out[2].source === 'external-ai' ? 'Respuesta externa lista' :
         (out[2] && out[2].fallback ? 'Base local activa' : 'Lista para escucharte');
     }, 550);
   });
   $$('.ai-actions button').forEach(b => b.addEventListener('click', () => {
+    if(b.dataset.imagePrompt){
+      const prompt = b.dataset.imagePrompt;
+      add('🎨 '+prompt, 'user');
+      const guard = {userId:activeUserId, serial:++aiRequestSerial};
+      $('#aiStatus').textContent = 'Creando imagen…';
+      generateGlowImage(prompt, 'ilustración digital cinematográfica', guard);
+      return;
+    }
     input.value = b.dataset.prompt;
     $('#chatForm').requestSubmit();
   }));
+  const artForm = $('#artForm'), artInput = $('#artPrompt'), artStyle = $('#artStyle');
+  if(artForm) artForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const prompt = artInput.value.trim();
+    if(!prompt){ artInput.focus(); return; }
+    add('🎨 '+prompt, 'user');
+    artInput.value = '';
+    const guard = {userId:activeUserId, serial:++aiRequestSerial};
+    $('#aiStatus').textContent = 'Creando imagen…';
+    generateGlowImage(prompt, artStyle ? artStyle.value : 'ilustración digital cinematográfica', guard);
+  });
 }
 
 /* ---------- Respiración ---------- */
@@ -2873,17 +2896,68 @@ function hashStr(s){
   for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h,16777619); }
   return h >>> 0;
 }
-function aiArtBubble(prompt){
+function aiArtBubble(prompt, options){
   const box = $('#chatMessages'); if(!box) return;
+  options = options || {};
   const d = document.createElement('div'); d.className = 'bubble ai ai-art';
-  const c = document.createElement('canvas');
-  c.className = 'art-cv'; c.width = 480; c.height = 300;
+  const imageUrl = typeof options.imageUrl === 'string' && /^(https?:\/\/|data:image\/)/i.test(options.imageUrl)
+    ? options.imageUrl : '';
+  if(imageUrl){
+    const img = document.createElement('img');
+    img.className = 'art-image'; img.loading = 'lazy'; img.alt = 'Imagen generada por Glow Art: '+prompt.slice(0,120);
+    img.src = imageUrl;
+    d.appendChild(img);
+  }else{
+    const c = document.createElement('canvas');
+    c.className = 'art-cv'; c.width = 480; c.height = 360;
+    d.appendChild(c);
+    drawGlowArt(c.getContext('2d'), c.width, c.height, hashStr(prompt));
+  }
   const cap = document.createElement('div'); cap.className = 'art-cap';
-  cap.textContent = '✨ Glow Art · "' + prompt.slice(0,64) + '"';
-  d.appendChild(c); d.appendChild(cap);
-  box.appendChild(d);
-  drawGlowArt(c.getContext('2d'), c.width, c.height, hashStr(prompt));
-  box.scrollTop = box.scrollHeight;
+  cap.textContent = '✨ Glow Art · "' + prompt.slice(0,64) + '"' + (imageUrl ? '' : ' · modo local');
+  d.appendChild(cap);
+  if(options.revisedPrompt && options.revisedPrompt !== prompt){
+    const note = document.createElement('small'); note.className = 'art-cap';
+    note.textContent = 'Dirección visual: '+String(options.revisedPrompt).slice(0,180);
+    d.appendChild(note);
+  }
+  const meta = document.createElement('div'); meta.className = 'art-meta';
+  if(imageUrl){
+    const open = document.createElement('a'); open.href=imageUrl; open.target='_blank'; open.rel='noopener noreferrer'; open.textContent='Abrir imagen';
+    const download = document.createElement('a'); download.href=imageUrl; download.download='mind-glow-art.png'; download.textContent='Descargar';
+    meta.appendChild(open); meta.appendChild(download);
+  }else{
+    const local = document.createElement('button'); local.type='button'; local.textContent='Generada sin conexión';
+    local.addEventListener('click', () => toast('Conecta el proveedor de imágenes para una ilustración IA real'));
+    meta.appendChild(local);
+  }
+  d.appendChild(meta);
+  box.appendChild(d); box.scrollTop = box.scrollHeight;
+}
+function setArtStatus(message){
+  const el = $('#artStatus'); if(el) el.textContent = message;
+}
+async function generateGlowImage(prompt, style, guard){
+  const brief = String(prompt || '').trim().slice(0,900);
+  if(!brief) return;
+  setArtStatus('Creando una imagen única de Mind Glow…');
+  try{
+    const res = await fetch(AI_REMOTE_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mode:'image', prompt:brief, style:style || 'ilustración digital cinematográfica'})
+    });
+    const data = await res.json().catch(() => ({}));
+    if(guard && (guard.userId !== activeUserId || guard.serial !== aiRequestSerial)) return;
+    if(!res.ok || !data.imageUrl) throw new Error(data.message || 'IMAGE_UNAVAILABLE');
+    aiArtBubble(brief, {imageUrl:data.imageUrl, revisedPrompt:data.revisedPrompt || ''});
+    $('#aiStatus').textContent = 'Imagen lista';
+    setArtStatus('Imagen lista · puedes abrirla o descargarla.');
+  }catch(error){
+    if(guard && (guard.userId !== activeUserId || guard.serial !== aiRequestSerial)) return;
+    aiArtBubble(brief);
+    $('#aiStatus').textContent = 'Glow Art local activo';
+    setArtStatus('Proveedor de imágenes no configurado: mostré una versión local para que no te quedes sin crear.');
+  }
 }
 function drawGlowArt(x,W,H,seed){
   const rand = () => { const v = Math.sin(seed += 12.9898) * 43758.5453; return v - Math.floor(v); };
