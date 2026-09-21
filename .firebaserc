@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "santos7store"
+  },
+  "targets": {
+    "santos7store": {
+      "hosting": {
+        "midglow": [
+          "midglow"
+        ]
+      }
+    }
+  }
+}

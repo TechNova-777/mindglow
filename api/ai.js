@@ -42,6 +42,10 @@ function extractImage(data){
   return {url:"", revisedPrompt:""};
 }
 
+function isGeminiImageEndpoint(url){
+  return /generativelanguage\.googleapis\.com\/v1beta\/openai\/images/i.test(String(url || ""));
+}
+
 function buildImagePrompt(prompt, style){
   return [
     "Create premium key art for Mind Glow, a youth-focused digital wellbeing and creativity experience.",
@@ -112,18 +116,53 @@ module.exports = async function handler(req, res){
     try{ body = JSON.parse(body); }catch(e){ body = {}; }
   }
   if(!body || typeof body !== "object" || Array.isArray(body)) body = {};
-  const mode = body && body.mode === "image" ? "image" : "chat";
+  const mode = body && body.mode === "image" ? "image" : body && body.mode === "game" ? "game" : "chat";
   if(!rateAllowed(req, mode === "image" ? IMAGE_RATE_LIMIT : RATE_LIMIT))
     return json(res, 429, {error:"RATE_LIMITED", message:"Demasiadas consultas. Inténtalo de nuevo en un minuto."});
 
   const apiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
   if(!apiKey) return json(res, 503, {error:mode === "image" ? "AI_IMAGE_NOT_CONFIGURED" : "AI_NOT_CONFIGURED", message:"Configura AI_API_KEY en el servidor."});
 
+  if(mode === "game"){
+    const prompt = text(body.prompt, 1800);
+    if(!prompt) return json(res, 400, {error:"GAME_PROMPT_REQUIRED"});
+    const providerUrl = process.env.AI_API_URL || DEFAULT_PROVIDER_URL;
+    const model = process.env.AI_MODEL || "chat-latest";
+    const system = [
+      "Eres el director técnico de un pequeño juego 3D procedural para Mind Glow.",
+      "Interpreta la idea del usuario y devuelve únicamente un objeto JSON válido, sin markdown ni explicación.",
+      "Usa exactamente estos campos: genre (adventure, racing, platform, horror, survival, puzzle o strategy), world (neon, city, island, school, fantasy o space), objective (reach, collect o survive), enemyCount (0-32), coinCount (0-60), obstacleCount (0-40), mapScale (0.85-2.1), rain (boolean), doubleJump (boolean), nitro (boolean), boss (boolean), difficulty (easy, normal o hard).",
+      "Elige valores coherentes con la idea. No inventes campos adicionales."
+    ].join(" ");
+    const requestBody = {model,messages:[{role:"system",content:system},{role:"user",content:prompt}],temperature:.15,max_tokens:500};
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try{
+      const upstream = await fetch(providerUrl, {method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+apiKey},body:JSON.stringify(requestBody),signal:controller.signal});
+      const data = await upstream.json().catch(() => ({}));
+      if(!upstream.ok){
+        console.error("AI game provider error", upstream.status, data && data.error ? data.error : "unknown");
+        return json(res, 502, {error:"AI_GAME_PROVIDER_ERROR",message:"El director de juego no respondió correctamente."});
+      }
+      const raw = extractAnswer(data);
+      const match = raw.match(/\{[\s\S]*\}/);
+      if(!match) return json(res, 502, {error:"AI_GAME_EMPTY_RESPONSE",message:"El director de juego no devolvió una especificación válida."});
+      let game;
+      try{ game = JSON.parse(match[0]); }catch(e){ return json(res, 502, {error:"AI_GAME_INVALID_JSON",message:"La especificación del juego no era válida."}); }
+      return json(res, 200, {game,source:"external-game-ai",model});
+    }catch(error){
+      const timeout = error && error.name === "AbortError";
+      console.error("AI game gateway error", timeout ? "timeout" : error.message);
+      return json(res, 502, {error:timeout ? "AI_GAME_TIMEOUT" : "AI_GAME_UNAVAILABLE",message:"No se pudo interpretar la idea del juego."});
+    }finally{ clearTimeout(timer); }
+  }
+
   if(mode === "image"){
     const prompt = text(body.prompt, MAX_IMAGE_PROMPT);
     if(!prompt) return json(res, 400, {error:"IMAGE_PROMPT_REQUIRED"});
     const imageUrl = process.env.AI_IMAGE_URL || DEFAULT_IMAGE_URL;
-    const imageModel = process.env.AI_IMAGE_MODEL || "gpt-image-2.5-sunburst";
+    const geminiImage = isGeminiImageEndpoint(imageUrl);
+    const imageModel = process.env.AI_IMAGE_MODEL || (geminiImage ? "gemini-2.5-flash-image" : "gpt-image-2.5-sunburst");
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45000);
     try{
@@ -133,7 +172,9 @@ module.exports = async function handler(req, res){
         body:JSON.stringify({
           model:imageModel,
           prompt:buildImagePrompt(prompt, text(body.style, 120)),
+          n:1,
           size:process.env.AI_IMAGE_SIZE || "1024x1024",
+          response_format:"b64_json",
           quality:process.env.AI_IMAGE_QUALITY || "high"
         }),
         signal:controller.signal
@@ -141,6 +182,9 @@ module.exports = async function handler(req, res){
       const data = await upstream.json().catch(() => ({}));
       if(!upstream.ok){
         console.error("AI image provider error", upstream.status, data && data.error ? data.error : "unknown");
+        const providerStatus = data && data.error && data.error.status;
+        if(upstream.status === 429 || providerStatus === "RESOURCE_EXHAUSTED")
+          return json(res, 503, {error:"AI_IMAGE_QUOTA", message:geminiImage ? "La cuenta Gemini necesita cuota o facturación activa para generar imágenes." : "El proveedor de imágenes alcanzó su cuota."});
         return json(res, 502, {error:"AI_IMAGE_PROVIDER_ERROR", message:"El proveedor de imágenes no respondió correctamente."});
       }
       const image = extractImage(data);
@@ -198,7 +242,8 @@ module.exports = async function handler(req, res){
     requestBody.max_tokens = Number(process.env.AI_MAX_TOKENS) || 1200;
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  // Gemini puede tardar unos segundos extra cuando recibe contexto e historial.
+  const timer = setTimeout(() => controller.abort(), 45000);
 
   try{
     const upstream = await fetch(providerUrl, {

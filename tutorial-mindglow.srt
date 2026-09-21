@@ -38,5 +38,5 @@ La app guarda tu estado en el navegador automáticamente. “Guardar carpeta” 
 00:00:18,600 --> 00:00:21,700
 06 · PUBLICACIÓN
 Comparte Mind Glow.
-La web está publicada y lista para cualquier dispositivo. Abre el enlace corto y empieza tu siguiente sesión.
+La web está publicada y lista para cualquier dispositivo. Abre el enlace y empieza tu siguiente sesión.
 

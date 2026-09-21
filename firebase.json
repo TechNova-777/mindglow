@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "site": "midglow",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firebase-debug.log",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}

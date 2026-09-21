@@ -1,1 +1,6 @@
 .vercel
+.firebase
+.env
+.env.*
+!.env.example
+firebase-debug.log

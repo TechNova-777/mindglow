@@ -23,7 +23,7 @@ const slides = [
   {tag:'03 · GAME STUDIO', title:['Describe.','Genera. Juega.'], body:['Cuenta qué quieres crear y pulsa “Generar mundo 3D”.','El motor local monta la escena, los objetos y la meta.'], accent:'#ffb86b', label:'Idea → Mundo 3D → Mecánicas → Juego listo'},
   {tag:'04 · CONTROLES', title:['Muévete en','primera persona.'], body:['PC: WASD o flechas · arrastra para mirar · ESPACIO para saltar.','Móvil o tablet: usa el D-pad y el botón de salto.'], accent:'#6ee3c9', label:'FLECHAS / WASD     ESPACIO     ARRASTRA'},
   {tag:'05 · PROGRESO', title:['Guarda tu','avance.'], body:['La app guarda tu estado en el navegador automáticamente.','“Guardar carpeta” exporta un proyecto; “Importar” lo recupera.'], accent:'#ff86b5', label:'Auto-guardado · Recuperar · Importar · Compartir'},
-  {tag:'06 · PUBLICACIÓN', title:['Comparte','Mind Glow.'], body:['La web está publicada y lista para cualquier dispositivo.','Abre el enlace corto y empieza tu siguiente sesión.'], accent:'#51e0c0', label:'mindglow.vercel.app'},
+  {tag:'06 · PUBLICACIÓN', title:['Comparte','Mind Glow.'], body:['La web está publicada y lista para cualquier dispositivo.','Abre el enlace y empieza tu siguiente sesión.'], accent:'#51e0c0', label:'midglow.web.app'},
 ];
 
 function svgFor(slide, index) {
