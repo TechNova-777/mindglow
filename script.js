@@ -1703,6 +1703,7 @@ const Space = (function(){
 /* ---------- MIND GLOW GAME AI: generador 3D local ---------- */
 const Studio = (() => {
   let renderer, scene, camera, clock, raf, spec = null, player = null, ready = false, running = false, busy = false, restoring = false;
+  let blenderLoaderPromise = null;
   let objects = { coins: [], hazards: [], enemies: [], rain: null, goal: null, props: [], platforms: [] };
   let keys = {}, score = 0, collected = 0, nitro = 100, jumpY = 0, groundY = 0, jumpV = 0, jumpCount = 0, hitCooldown = 0, runTime = 0, won = false, rng = Math.random, orbitYaw = Math.PI, orbitPitch = 0.28, orbitDistance = 10, drag = null, velocity = new THREE.Vector3(), cameraShake = 0;
   const $s = id => document.getElementById(id);
@@ -1846,6 +1847,25 @@ const Studio = (() => {
   function glowPart(parent, geometry, color, intensity=.65){
     return studioPart(parent,geometry,color,{roughness:.28,metalness:.35,emissive:color,emissiveIntensity:intensity});
   }
+  function loadBlenderCompanion(target){
+    if(!blenderLoaderPromise){
+      blenderLoaderPromise=import('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js').then(({GLTFLoader})=>new GLTFLoader()).catch(()=>null);
+    }
+    blenderLoaderPromise.then(loader=>{
+      if(!loader||!target||!target.parent)return;
+      loader.load('/assets/3d/mindglow-companion.glb',gltf=>{
+        if(!target.parent)return;
+        const model=gltf.scene;
+        model.name='MindGlow_Blender_Model';
+        model.scale.setScalar(1);
+        model.position.y=0;
+        model.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=true;}});
+        target.children.forEach(child=>{if(child!==target.userData.glow)child.visible=false;});
+        target.add(model);
+        target.userData.blenderModel=model;
+      },undefined,()=>{});
+    });
+  }
   function addWorldBox(x,y,z,w,h,d,color,options={}){
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),studioMaterial(color,options));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;
   }
@@ -1923,7 +1943,7 @@ const Studio = (() => {
     }else{
       const body=studioPart(player,new THREE.CylinderGeometry(.48,.52,1.45,12),0x51e0c0,{metalness:.2});body.position.y=1.02;const head=studioPart(player,new THREE.SphereGeometry(.42,16,12),0xc9a6ff);head.position.y=1.92;const visor=glowPart(player,new THREE.BoxGeometry(.5,.12,.05),0x10172e,1);visor.position.set(0,1.95,-.38);for(const x of [-.45,.45]){const arm=studioPart(player,new THREE.CylinderGeometry(.1,.1,.55,8),0xc9a6ff);arm.position.set(x,1.08,0);arm.rotation.z=x<0?-.18:.18;}
     }
-    const playerGlow=new THREE.PointLight(spec.genre==='racing'?0xff4fd8:0x51e0c0,1.35,6);playerGlow.position.y=1.35;player.userData.glow=playerGlow;player.add(playerGlow);
+    const playerGlow=new THREE.PointLight(spec.genre==='racing'?0xff4fd8:0x51e0c0,1.35,6);playerGlow.position.y=1.35;player.userData.glow=playerGlow;player.add(playerGlow);if(spec.genre!=='racing')loadBlenderCompanion(player);
     player.position.set(0,0,10);scene.add(player);
     for(let i=0;i<spec.coinCount;i++){const p=pointAwayFromStart();const c=glowPart(scene,new THREE.TorusGeometry(.32,.105,10,18),0xffd166,.85);c.position.set(p.x,.75+(spec.genre==='platform'?rng()*2.6:0),p.z);c.rotation.x=Math.PI/2;c.userData.spin=rng()*3;objects.coins.push(c);}
     for(let i=0;i<spec.obstacleCount;i++){const p=pointAwayFromStart();let h;if(spec.world==='city'||spec.genre==='racing'){h=new THREE.Group();studioPart(h,new THREE.BoxGeometry(1.55,.72,.55),0x2b4167,{metalness:.48,roughness:.38}).position.y=.55;const stripe=glowPart(h,new THREE.BoxGeometry(1.05,.1,.035),i%2?0xffc857:0xff658f,.9);stripe.position.set(0,.72,-.29);h.position.set(p.x,0,p.z);h.rotation.y=rng()*Math.PI;}else{h=new THREE.Group();studioPart(h,new THREE.CylinderGeometry(.42,.5,1.35,10),spec.genre==='horror'?0x733c70:0x3e5c86,{metalness:.35,roughness:.42}).position.y=.68;const cap=glowPart(h,new THREE.TorusGeometry(.38,.06,8,16),spec.genre==='horror'?0xff658f:0x51e0c0,.8);cap.rotation.x=Math.PI/2;cap.position.y=1.1;h.position.set(p.x,0,p.z);h.rotation.y=rng()*Math.PI;}h.userData.baseY=h.position.y;h.userData.phase=rng()*Math.PI*2;objects.hazards.push(h);}
