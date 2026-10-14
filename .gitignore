@@ -3,4 +3,5 @@
 .env
 .env.*
 !.env.example
+!.env.local.example
 firebase-debug.log

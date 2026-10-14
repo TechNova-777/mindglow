@@ -613,7 +613,12 @@ const PERSONAL_EMOTION_PATTERN = /\b(me siento|estoy|ando|tengo)\b.*\b(ansios|an
 let aiRequestSerial = 0;
 async function askExternalAI(question, localOut, guard){
   const meta = localOut[2] || {};
-  const localFallback = reason => [localOut[0], localOut[1], Object.assign({}, meta, {source:'local', fallback:reason})];
+  const localFallback = reason => {
+    if(reason === 'external-unavailable'){
+      return ['No pude conectar con Gemini. Ejecuta Mind Glow con `node server.js` y revisa las variables de entorno del despliegue.', localOut[1], Object.assign({}, meta, {source:'local', fallback:reason})];
+    }
+    return [localOut[0], localOut[1], Object.assign({}, meta, {source:'local', fallback:reason})];
+  };
   const personalEmotion = PERSONAL_EMOTION_PATTERN.test(normalText(question));
   const privateKnowledge = meta.intent && meta.intent.indexOf('knowledge:') === 0 &&
     LOCAL_PRIVATE_KNOWLEDGE.has(meta.intent.slice('knowledge:'.length));
@@ -646,12 +651,18 @@ async function askExternalAI(question, localOut, guard){
       last.text = answer.slice(0,700);
       last.intent = 'external-ai';
       last.source = data.source || 'external-ai';
+      last.provider = data.provider || 'IA externa';
+      last.model = data.model || '';
       last.sources = Array.isArray(data.sources) ? data.sources.slice(0,5) : [];
     }
     const memory = state.aiMemory && state.aiMemory[state.aiMemory.length-1];
     if(memory){ memory.intent = 'external-ai'; memory.source = data.source || 'external-ai'; }
     save();
-    return [answer, localOut[1], {intent:'external-ai', source:data.source || 'external-ai', sources:Array.isArray(data.sources) ? data.sources.slice(0,5) : []}];
+    return [answer, localOut[1], {
+      intent:'external-ai', source:data.source || 'external-ai',
+      provider:data.provider || 'IA externa', model:data.model || '',
+      sources:Array.isArray(data.sources) ? data.sources.slice(0,5) : []
+    }];
   }catch(error){
     return localFallback('external-unavailable');
   }
@@ -660,7 +671,7 @@ async function askExternalAI(question, localOut, guard){
 /* ---------- Glow AI ---------- */
 function aiInit(){
   const box = $('#chatMessages'), input = $('#chatInput');
-  function add(t, who, actions, sources){
+  function add(t, who, actions, sources, provider){
     const d = document.createElement('div');
     d.className = 'bubble ' + who;
     t.split('\n').forEach((line,i) => {
@@ -697,13 +708,21 @@ function aiInit(){
       });
       if(sourceBox.querySelector('a')) d.appendChild(sourceBox);
     }
+    if(who === 'ai' && provider && provider.source === 'external-ai'){
+      const badge = document.createElement('small');
+      badge.className = 'bubble-provider';
+      badge.textContent = (provider.provider || 'IA externa') + (provider.model ? ' · '+provider.model : '');
+      d.appendChild(badge);
+    }
     box.appendChild(d); box.scrollTop = box.scrollHeight;
   }
   const welcome = () => 'Hola'+(firstName()?', '+firstName():'')+'. Soy Glow AI 3.0, tu guía personal local.\nPuedo reconocer señales emocionales en lo que escribes, responder con empatía y ofrecer pasos seguros sin diagnosticarte. También tengo una base de conocimiento de estudio, ciencia, bienestar, seguridad digital y Mind Glow.\nCuando el servidor está configurado, consulto un proveedor externo para preguntas abiertas y puedo crear imágenes originales con Glow Art. No invento datos: si no conozco algo o no hay conexión, te lo diré. ¿Cómo te sientes hoy?';
   window.refreshGlowAI = () => {
     box.innerHTML = '';
     add(welcome(),'ai');
-    (state.aiHistory || []).slice(-12).forEach(m => add(m.text, m.role === 'user' ? 'user' : 'ai', m.actions || [], m.sources || []));
+    (state.aiHistory || []).slice(-12).forEach(m => add(m.text, m.role === 'user' ? 'user' : 'ai', m.actions || [], m.sources || [], {
+      source:m.source, provider:m.provider, model:m.model
+    }));
   };
   window.refreshGlowAI();
 
@@ -939,10 +958,10 @@ function aiInit(){
       $('#aiStatus').textContent = 'Consultando conocimiento externo…';
       const out = await askExternalAI(t, localOut, guard);
       if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
-      add(out[0],'ai',out[1],out[2] && out[2].sources);
+      add(out[0],'ai',out[1],out[2] && out[2].sources,out[2]);
       if(out[2] && out[2].intent === 'art' && out[2].artPrompt)
         generateGlowImage(out[2].artPrompt, 'ilustración digital cinematográfica', guard);
-      $('#aiStatus').textContent = out[2] && out[2].source === 'external-ai' ? 'Respuesta externa lista' :
+      $('#aiStatus').textContent = out[2] && out[2].source === 'external-ai' ? ((out[2].provider || 'IA externa')+' conectada') :
         (out[2] && out[2].fallback ? 'Base local activa' : 'Lista para escucharte');
     }, 550);
   });
