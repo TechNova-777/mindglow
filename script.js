@@ -1835,7 +1835,7 @@ const Studio = (() => {
   function clearSceneEnhanced(){
     if(!scene)return;
     while(scene.children.length){const child=scene.children[0];scene.remove(child);disposeStudioNode(child);}
-    objects={coins:[],hazards:[],enemies:[],rain:null,goal:null,props:[],platforms:[]};player=null;
+    objects={coins:[],hazards:[],enemies:[],rain:null,goal:null,props:[],platforms:[],atmosphere:null};player=null;
   }
   function studioMaterial(color, options={}){
     return new THREE.MeshStandardMaterial(Object.assign({color,roughness:.62,metalness:0},options));
@@ -1848,6 +1848,28 @@ const Studio = (() => {
   }
   function addWorldBox(x,y,z,w,h,d,color,options={}){
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),studioMaterial(color,options));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;
+  }
+  function addSkyDome(){
+    const palettes={
+      city:[0x080b2b,0x24105a], island:[0x0b273e,0x2b6d86], school:[0x090b18,0x282347],
+      fantasy:[0x071b1d,0x214f42], space:[0x01030d,0x141d55], neon:[0x071124,0x2a1764]
+    };
+    const colors=palettes[spec.world]||palettes.neon;
+    const dome=new THREE.Mesh(new THREE.SphereGeometry(120,32,18),new THREE.ShaderMaterial({
+      uniforms:{top:{value:new THREE.Color(colors[1])},bottom:{value:new THREE.Color(colors[0])}},
+      vertexShader:'varying float vSkyY; void main(){vSkyY=normalize(position).y;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+      fragmentShader:'uniform vec3 top; uniform vec3 bottom; varying float vSkyY; void main(){float t=smoothstep(-0.35,0.85,vSkyY);gl_FragColor=vec4(mix(bottom,top,t),1.0);}',
+      side:THREE.BackSide,depthWrite:false
+    }));
+    dome.frustumCulled=false;scene.add(dome);
+  }
+  function addAtmosphere(scale){
+    if(spec.world==='space')return;
+    const count=spec.world==='horror'?150:260, positions=[];
+    for(let i=0;i<count;i++) positions.push((rng()-.5)*58*scale,1.5+rng()*15,(rng()-.5)*58*scale);
+    const color=spec.world==='fantasy'?0x9bffcf:spec.world==='school'?0x9a8cff:0x78dfff;
+    const points=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color,size:spec.world==='horror'?.045:.065,transparent:true,opacity:spec.world==='horror'?.32:.48,depthWrite:false}));
+    points.geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));points.userData.phase=rng()*Math.PI*2;scene.add(points);objects.atmosphere=points;
   }
   function pointAwayFromStart(){
     let x=0,z=0,tries=0;
@@ -1870,9 +1892,10 @@ const Studio = (() => {
     if(!spec)return;
     clearSceneEnhanced();rng=seeded(spec.seed);const scale=spec.mapScale;
     const dark=spec.world==='space'?'#020611':spec.world==='horror'?'#080711':spec.world==='school'?'#0d101b':'#071124';
-    scene.background=new THREE.Color(dark);scene.fog=new THREE.Fog(dark,24*scale,86*scale);
+    scene.background=new THREE.Color(dark);scene.fog=new THREE.Fog(dark,24*scale,86*scale);addSkyDome();
     scene.add(new THREE.HemisphereLight(spec.world==='horror'?0x596078:0x9da9ff,0x0a1020,1.85));
-    const sun=new THREE.DirectionalLight(spec.world==='horror'?0x8791ff:0x75e8ff,2.8);sun.position.set(12,18,10);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
+    const sun=new THREE.DirectionalLight(spec.world==='horror'?0x8791ff:0x75e8ff,2.8);sun.position.set(12,18,10);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-.0005;sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
+    const fill=new THREE.PointLight(spec.world==='horror'?0x714dff:0x51e0c0,1.8,26);fill.position.set(-8,6,8);scene.add(fill);
     const floorColor=spec.world==='island'?0x183e55:spec.world==='fantasy'?0x173a29:spec.world==='school'?0x202338:spec.world==='space'?0x0b1026:0x0b1732;
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(72*scale,72*scale),studioMaterial(floorColor,{roughness:.86}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
     const grid=new THREE.GridHelper(68*scale,Math.max(24,Math.round(34*scale)),0x32628b,0x172542);grid.position.y=.018;const gridMaterials=Array.isArray(grid.material)?grid.material:[grid.material];gridMaterials.forEach(material=>{material.opacity=.36;material.transparent=true;});scene.add(grid);
@@ -1891,12 +1914,14 @@ const Studio = (() => {
       const stars=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:0xb9d5ff,size:.11,transparent:true,opacity:.9}));const p=[];for(let i=0;i<800;i++)p.push((rng()-.5)*110,2+rng()*45,(rng()-.5)*110);stars.geometry.setAttribute('position',new THREE.Float32BufferAttribute(p,3));scene.add(stars);
       const planet=new THREE.Mesh(new THREE.SphereGeometry(5,28,18),studioMaterial(0x283a91,{roughness:.8,emissive:0x111a55,emissiveIntensity:.35}));planet.position.set(18,9,-18);scene.add(planet);const ring=new THREE.Mesh(new THREE.TorusGeometry(7,.18,12,64),studioMaterial(0x51e0c0,{emissive:0x51e0c0,emissiveIntensity:.8,metalness:.5}));ring.rotation.x=.8;ring.position.copy(planet.position);scene.add(ring);
     }
+    addAtmosphere(scale);
     player=new THREE.Group();
     if(spec.genre==='racing'){
       const body=studioPart(player,new THREE.BoxGeometry(1.8,.55,2.9),0xff4fd8,{metalness:.45,roughness:.3});body.position.y=.7;const cabin=studioPart(player,new THREE.BoxGeometry(1.2,.45,1.25),0x5b66c7,{metalness:.45,roughness:.2,transparent:true,opacity:.86});cabin.position.set(0,1.16,.08);for(const x of [-.86,.86])for(const z of [-.95,.95]){const w=studioPart(player,new THREE.CylinderGeometry(.27,.27,.2,14),0x11131d,{roughness:.92});w.rotation.z=Math.PI/2;w.position.set(x,.43,z);}const light=glowPart(player,new THREE.BoxGeometry(.8,.05,.05),0xffd166,1);light.position.set(0,.82,-1.48);
     }else{
       const body=studioPart(player,new THREE.CylinderGeometry(.48,.52,1.45,12),0x51e0c0,{metalness:.2});body.position.y=1.02;const head=studioPart(player,new THREE.SphereGeometry(.42,16,12),0xc9a6ff);head.position.y=1.92;const visor=glowPart(player,new THREE.BoxGeometry(.5,.12,.05),0x10172e,1);visor.position.set(0,1.95,-.38);for(const x of [-.45,.45]){const arm=studioPart(player,new THREE.CylinderGeometry(.1,.1,.55,8),0xc9a6ff);arm.position.set(x,1.08,0);arm.rotation.z=x<0?-.18:.18;}
     }
+    const playerGlow=new THREE.PointLight(spec.genre==='racing'?0xff4fd8:0x51e0c0,1.35,6);playerGlow.position.y=1.35;player.add(playerGlow);
     player.position.set(0,0,10);scene.add(player);
     for(let i=0;i<spec.coinCount;i++){const p=pointAwayFromStart();const c=glowPart(scene,new THREE.TorusGeometry(.32,.105,10,18),0xffd166,.85);c.position.set(p.x,.75+(spec.genre==='platform'?rng()*2.6:0),p.z);c.rotation.x=Math.PI/2;c.userData.spin=rng()*3;objects.coins.push(c);}
     for(let i=0;i<spec.obstacleCount;i++){const p=pointAwayFromStart();let h;if(spec.genre==='racing'){h=glowPart(scene,new THREE.BoxGeometry(1.1+rng(),1.2,1.1),0xff658f,.55);h.position.set(p.x,.6,p.z);h.rotation.y=rng()*Math.PI;}else{h=glowPart(scene,new THREE.ConeGeometry(.62+rng()*.35,1.7,6),spec.genre==='horror'?0x9d315d:0xff658f,.45);h.position.set(p.x,.85,p.z);h.rotation.y=rng()*Math.PI;}objects.hazards.push(h);}
@@ -1925,6 +1950,7 @@ const Studio = (() => {
   function loopEnhanced(){
     raf=requestAnimationFrame(loopEnhanced);if(!scene||!camera)return;const dt=Math.min(clock.getDelta(),.05);runTime+=dt;
     if(objects.coins)objects.coins.forEach(c=>{if(c.visible){c.rotation.z+=dt*(2.5+(c.userData.spin||0));c.position.y+=Math.sin(runTime*2+c.userData.spin)*dt*.025;}});
+    if(objects.atmosphere){const p=objects.atmosphere.geometry.attributes.position;for(let i=0;i<p.count;i++){const j=i*3;p.array[j]+=dt*(.018+(i%4)*.006);p.array[j+1]+=Math.sin(runTime*.7+i+objects.atmosphere.userData.phase)*dt*.006;if(p.array[j]>34*spec.mapScale)p.array[j]=-34*spec.mapScale;}p.needsUpdate=true;}
     if(objects.goal){objects.goal.rotation.y+=dt*.45;const core=objects.goal.children[1];if(core)core.position.y=2+Math.sin(runTime*3)*.25;}
     if(objects.rain){const p=objects.rain.geometry.attributes.position;for(let i=1;i<p.count*3;i+=3){let y=p.array[i]-dt*22;p.array[i]=y<0?24:y;}p.needsUpdate=true;}
     if(running&&player&&!won){
