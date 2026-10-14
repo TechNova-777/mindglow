@@ -1838,7 +1838,7 @@ const Studio = (() => {
     objects={coins:[],hazards:[],enemies:[],rain:null,goal:null,props:[],platforms:[],atmosphere:null};player=null;
   }
   function studioMaterial(color, options={}){
-    return new THREE.MeshStandardMaterial(Object.assign({color,roughness:.62,metalness:0},options));
+    return new THREE.MeshPhysicalMaterial(Object.assign({color,roughness:.62,metalness:0,clearcoat:.12,clearcoatRoughness:.24},options));
   }
   function studioPart(parent, geometry, color, options={}){
     const m=new THREE.Mesh(geometry,studioMaterial(color,options));m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
@@ -1902,6 +1902,7 @@ const Studio = (() => {
     if(spec.genre==='racing')addRoad(scale);
     if(spec.world==='city'){
       for(let i=0;i<30;i++){const x=(i%8-3.5)*4.9+(rng()-.5)*.8,z=(Math.floor(i/8)-1.5)*6.4;const h=2.4+rng()*8;addWorldBox(x,h/2,z,3.5+rng()*1.1,h,3.6,0x15264b,{metalness:.22});const sign=addWorldBox(x,h*.56,z-1.84,2.35,.08,.03,i%2?0x51e0c0:0x9b6cff,{roughness:.2,emissive:i%2?0x51e0c0:0x9b6cff,emissiveIntensity:1.2});sign.rotation.z=(rng()-.5)*.08;}
+      for(let i=0;i<8;i++){const x=(i-3.5)*5.1;const pole=addWorldBox(x,1.7,-18,.08,3.4,.08,0x33476b,{metalness:.55,roughness:.32});const lamp=glowPart(scene,new THREE.SphereGeometry(.16,10,8),i%2?0x51e0c0:0xffd166,1.4);lamp.position.set(x,3.35,-18);const light=new THREE.PointLight(i%2?0x51e0c0:0xffd166,.42,7);light.position.copy(lamp.position);scene.add(light);}
     }else if(spec.world==='school'){
       for(let i=0;i<10;i++){const x=(i%5-2)*6.2,z=(Math.floor(i/5)-.5)*8;addWorldBox(x,2.2,z,4.7,4.4,4.7,0x2d3046,{roughness:.9});addWorldBox(x,4.45,z-2.4,3.3,.12,.04,0x8b7cff,{roughness:.25,emissive:0x8b7cff,emissiveIntensity:.65});}
       for(let i=0;i<10;i++)addWorldBox((i%2?1:-1)*(6.5+rng()*4),.08,-20+rng()*35,.22,.16,.22,0xff658f,{emissive:0xff658f,emissiveIntensity:1});
@@ -1921,7 +1922,7 @@ const Studio = (() => {
     }else{
       const body=studioPart(player,new THREE.CylinderGeometry(.48,.52,1.45,12),0x51e0c0,{metalness:.2});body.position.y=1.02;const head=studioPart(player,new THREE.SphereGeometry(.42,16,12),0xc9a6ff);head.position.y=1.92;const visor=glowPart(player,new THREE.BoxGeometry(.5,.12,.05),0x10172e,1);visor.position.set(0,1.95,-.38);for(const x of [-.45,.45]){const arm=studioPart(player,new THREE.CylinderGeometry(.1,.1,.55,8),0xc9a6ff);arm.position.set(x,1.08,0);arm.rotation.z=x<0?-.18:.18;}
     }
-    const playerGlow=new THREE.PointLight(spec.genre==='racing'?0xff4fd8:0x51e0c0,1.35,6);playerGlow.position.y=1.35;player.add(playerGlow);
+    const playerGlow=new THREE.PointLight(spec.genre==='racing'?0xff4fd8:0x51e0c0,1.35,6);playerGlow.position.y=1.35;player.userData.glow=playerGlow;player.add(playerGlow);
     player.position.set(0,0,10);scene.add(player);
     for(let i=0;i<spec.coinCount;i++){const p=pointAwayFromStart();const c=glowPart(scene,new THREE.TorusGeometry(.32,.105,10,18),0xffd166,.85);c.position.set(p.x,.75+(spec.genre==='platform'?rng()*2.6:0),p.z);c.rotation.x=Math.PI/2;c.userData.spin=rng()*3;objects.coins.push(c);}
     for(let i=0;i<spec.obstacleCount;i++){const p=pointAwayFromStart();let h;if(spec.genre==='racing'){h=glowPart(scene,new THREE.BoxGeometry(1.1+rng(),1.2,1.1),0xff658f,.55);h.position.set(p.x,.6,p.z);h.rotation.y=rng()*Math.PI;}else{h=glowPart(scene,new THREE.ConeGeometry(.62+rng()*.35,1.7,6),spec.genre==='horror'?0x9d315d:0xff658f,.45);h.position.set(p.x,.85,p.z);h.rotation.y=rng()*Math.PI;}h.userData.baseY=h.position.y;h.userData.phase=rng()*Math.PI*2;objects.hazards.push(h);}
@@ -1951,6 +1952,7 @@ const Studio = (() => {
   function loopEnhanced(){
     raf=requestAnimationFrame(loopEnhanced);if(!scene||!camera)return;const dt=Math.min(clock.getDelta(),.05);runTime+=dt;
     cameraShake=Math.max(0,cameraShake-dt*1.8);
+    if(player&&player.userData.glow)player.userData.glow.intensity=1.2+Math.sin(runTime*2.4)*.18+(running?Math.min(1,velocity.length()/8)*.35:0);
     if(objects.coins)objects.coins.forEach(c=>{if(c.visible){c.rotation.z+=dt*(2.5+(c.userData.spin||0));c.position.y+=Math.sin(runTime*2+c.userData.spin)*dt*.025;}});
     if(objects.props)objects.props.forEach((prop,i)=>{prop.rotation.y+=dt*.04;prop.rotation.z=Math.sin(runTime*.65+i)*.012;});
     if(objects.hazards)objects.hazards.forEach((hazard,i)=>{hazard.rotation.y+=dt*(.45+(i%3)*.18);if(hazard.userData.baseY!==undefined)hazard.position.y=hazard.userData.baseY+Math.sin(runTime*1.8+hazard.userData.phase)*.045;});
