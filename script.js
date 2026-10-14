@@ -1704,7 +1704,7 @@ const Space = (function(){
 const Studio = (() => {
   let renderer, scene, camera, clock, raf, spec = null, player = null, ready = false, running = false, busy = false, restoring = false;
   let objects = { coins: [], hazards: [], enemies: [], rain: null, goal: null, props: [], platforms: [] };
-  let keys = {}, score = 0, collected = 0, nitro = 100, jumpY = 0, groundY = 0, jumpV = 0, jumpCount = 0, hitCooldown = 0, runTime = 0, won = false, rng = Math.random, orbitYaw = Math.PI, orbitPitch = 0.28, orbitDistance = 10, drag = null;
+  let keys = {}, score = 0, collected = 0, nitro = 100, jumpY = 0, groundY = 0, jumpV = 0, jumpCount = 0, hitCooldown = 0, runTime = 0, won = false, rng = Math.random, orbitYaw = Math.PI, orbitPitch = 0.28, orbitDistance = 10, drag = null, velocity = new THREE.Vector3(), cameraShake = 0;
   const $s = id => document.getElementById(id);
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   const norm = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -1924,12 +1924,12 @@ const Studio = (() => {
     const playerGlow=new THREE.PointLight(spec.genre==='racing'?0xff4fd8:0x51e0c0,1.35,6);playerGlow.position.y=1.35;player.add(playerGlow);
     player.position.set(0,0,10);scene.add(player);
     for(let i=0;i<spec.coinCount;i++){const p=pointAwayFromStart();const c=glowPart(scene,new THREE.TorusGeometry(.32,.105,10,18),0xffd166,.85);c.position.set(p.x,.75+(spec.genre==='platform'?rng()*2.6:0),p.z);c.rotation.x=Math.PI/2;c.userData.spin=rng()*3;objects.coins.push(c);}
-    for(let i=0;i<spec.obstacleCount;i++){const p=pointAwayFromStart();let h;if(spec.genre==='racing'){h=glowPart(scene,new THREE.BoxGeometry(1.1+rng(),1.2,1.1),0xff658f,.55);h.position.set(p.x,.6,p.z);h.rotation.y=rng()*Math.PI;}else{h=glowPart(scene,new THREE.ConeGeometry(.62+rng()*.35,1.7,6),spec.genre==='horror'?0x9d315d:0xff658f,.45);h.position.set(p.x,.85,p.z);h.rotation.y=rng()*Math.PI;}objects.hazards.push(h);}
+    for(let i=0;i<spec.obstacleCount;i++){const p=pointAwayFromStart();let h;if(spec.genre==='racing'){h=glowPart(scene,new THREE.BoxGeometry(1.1+rng(),1.2,1.1),0xff658f,.55);h.position.set(p.x,.6,p.z);h.rotation.y=rng()*Math.PI;}else{h=glowPart(scene,new THREE.ConeGeometry(.62+rng()*.35,1.7,6),spec.genre==='horror'?0x9d315d:0xff658f,.45);h.position.set(p.x,.85,p.z);h.rotation.y=rng()*Math.PI;}h.userData.baseY=h.position.y;h.userData.phase=rng()*Math.PI*2;objects.hazards.push(h);}
     for(let i=0;i<spec.enemyCount+(spec.boss?1:0);i++){const p=pointAwayFromStart(),boss=spec.boss&&i===spec.enemyCount;const e=glowPart(scene,new THREE.IcosahedronGeometry(boss?.92:.52,1),boss?0xffae4d:0x8b7cff,.7);e.position.set(p.x,boss?1.05:.72,p.z);e.userData.boss=boss;e.userData.phase=rng()*6.28;objects.enemies.push(e);}
     if(spec.genre==='platform')for(let i=0;i<14;i++){const x=(rng()-.5)*18*scale,z=7-i*3.1*scale,y=.45+(i%4)*.8;const p=addWorldBox(x,y,z,3.4,Math.max(.35,y*.35),2.3,0x4a5eaf,{metalness:.22,emissive:0x111d4f,emissiveIntensity:.4});objects.platforms.push(p);}
     const goal=new THREE.Group();const portal=glowPart(goal,new THREE.TorusGeometry(2.2,.18,14,48),0x51e0c0,1);portal.rotation.x=Math.PI/2;const core=glowPart(goal,new THREE.SphereGeometry(.35,16,12),0xffd166,1);core.position.y=2;goal.position.set(0,2.05,-22*scale);scene.add(goal);objects.goal=goal;
     if(spec.rain){const n=520,pos=[];for(let i=0;i<n;i++)pos.push((rng()-.5)*46*scale,2+rng()*24,(rng()-.5)*46*scale);const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));objects.rain=new THREE.Points(g,new THREE.PointsMaterial({color:0x9fc9ff,size:.075,transparent:true,opacity:.8}));scene.add(objects.rain);}
-    score=0;collected=0;nitro=100;jumpY=0;groundY=0;jumpV=0;jumpCount=0;hitCooldown=0;runTime=0;won=false;
+    score=0;collected=0;nitro=100;jumpY=0;groundY=0;jumpV=0;jumpCount=0;hitCooldown=0;runTime=0;won=false;velocity.set(0,0,0);cameraShake=0;
     const savedRun=restoring&&state.studioRun&&state.studioRun.prompt===spec.prompt?state.studioRun:null;if(savedRun){score=savedRun.score||0;collected=savedRun.collected||0;nitro=Number.isFinite(savedRun.nitro)?savedRun.nitro:100;player.position.x=Number(savedRun.x)||0;player.position.z=Number.isFinite(savedRun.z)?savedRun.z:10;}
     updateHudEnhanced();$s('studioEmpty').classList.add('hidden');$s('studioHud').classList.add('visible');
   }
@@ -1945,27 +1945,33 @@ const Studio = (() => {
     const forward=new THREE.Vector3(Math.sin(orbitYaw),0,Math.cos(orbitYaw));
     const target=player.position.clone().add(new THREE.Vector3(0,1.05,0));
     const desired=target.clone().addScaledVector(forward,-orbitDistance);desired.y+=orbitDistance*(.34+orbitPitch*.45);
+    if(cameraShake>0)desired.add(new THREE.Vector3(Math.sin(runTime*38)*cameraShake,Math.cos(runTime*31)*cameraShake*.55,Math.sin(runTime*27)*cameraShake*.35));
     camera.position.lerp(desired,.12);camera.lookAt(target);
   }
   function loopEnhanced(){
     raf=requestAnimationFrame(loopEnhanced);if(!scene||!camera)return;const dt=Math.min(clock.getDelta(),.05);runTime+=dt;
+    cameraShake=Math.max(0,cameraShake-dt*1.8);
     if(objects.coins)objects.coins.forEach(c=>{if(c.visible){c.rotation.z+=dt*(2.5+(c.userData.spin||0));c.position.y+=Math.sin(runTime*2+c.userData.spin)*dt*.025;}});
+    if(objects.props)objects.props.forEach((prop,i)=>{prop.rotation.y+=dt*.04;prop.rotation.z=Math.sin(runTime*.65+i)*.012;});
+    if(objects.hazards)objects.hazards.forEach((hazard,i)=>{hazard.rotation.y+=dt*(.45+(i%3)*.18);if(hazard.userData.baseY!==undefined)hazard.position.y=hazard.userData.baseY+Math.sin(runTime*1.8+hazard.userData.phase)*.045;});
     if(objects.atmosphere){const p=objects.atmosphere.geometry.attributes.position;for(let i=0;i<p.count;i++){const j=i*3;p.array[j]+=dt*(.018+(i%4)*.006);p.array[j+1]+=Math.sin(runTime*.7+i+objects.atmosphere.userData.phase)*dt*.006;if(p.array[j]>34*spec.mapScale)p.array[j]=-34*spec.mapScale;}p.needsUpdate=true;}
     if(objects.goal){objects.goal.rotation.y+=dt*.45;const core=objects.goal.children[1];if(core)core.position.y=2+Math.sin(runTime*3)*.25;}
     if(objects.rain){const p=objects.rain.geometry.attributes.position;for(let i=1;i<p.count*3;i+=3){let y=p.array[i]-dt*22;p.array[i]=y<0?24:y;}p.needsUpdate=true;}
     if(running&&player&&!won){
       hitCooldown=Math.max(0,hitCooldown-dt);const forwardX=Math.sin(orbitYaw),forwardZ=Math.cos(orbitYaw),rightX=Math.cos(orbitYaw),rightZ=-Math.sin(orbitYaw);
-      const side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),walk=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);const boosting=!!(keys.shift&&spec.nitro&&nitro>0);const speed=(spec.genre==='racing'?8.4:6.1)*(boosting?1.85:1)*dt;
+      const side=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),walk=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0);const hasInput=!!(side||walk),boosting=!!(keys.shift&&spec.nitro&&nitro>0);const input=new THREE.Vector3(rightX*side+forwardX*walk,0,rightZ*side+forwardZ*walk);if(hasInput)input.normalize();
+      const maxSpeed=(spec.genre==='racing'?8.4:6.1)*(boosting?1.85:1),desiredVelocity=input.multiplyScalar(maxSpeed),response=1-Math.exp(-(boosting?13:10)*dt);velocity.lerp(desiredVelocity,response);if(!hasInput)velocity.multiplyScalar(Math.exp(-7.5*dt));
       if(boosting)nitro=Math.max(0,nitro-dt*28);else nitro=Math.min(100,nitro+dt*8);
-      const prev=player.position.clone();player.position.x=Math.max(-22*spec.mapScale,Math.min(22*spec.mapScale,player.position.x+(rightX*side+forwardX*walk)*speed));player.position.z=Math.max(-29*spec.mapScale,Math.min(16*spec.mapScale,player.position.z+(rightZ*side+forwardZ*walk)*speed));
+      const prev=player.position.clone();player.position.addScaledVector(velocity,dt);player.position.x=Math.max(-22*spec.mapScale,Math.min(22*spec.mapScale,player.position.x));player.position.z=Math.max(-29*spec.mapScale,Math.min(16*spec.mapScale,player.position.z));
       if(keys.space){const jumps=spec.doubleJump?2:1;if(jumpCount<jumps){jumpV=spec.genre==='racing'?5.2:7.4;jumpCount++;keys.space=false;}}
       groundY=0;
       if(spec.genre==='platform')objects.platforms.forEach(platform=>{const box=platform.geometry.parameters||{};const halfW=(box.width||3.4)/2+.35,halfD=(box.depth||2.3)/2+.35,top=platform.position.y+(box.height||.5)/2;if(Math.abs(player.position.x-platform.position.x)<=halfW&&Math.abs(player.position.z-platform.position.z)<=halfD&&jumpY>=top-.18)groundY=Math.max(groundY,top);});
-      jumpV-=dt*18;jumpY+=jumpV*dt;if(jumpY<=groundY){jumpY=groundY;jumpV=0;jumpCount=0;}player.position.y=jumpY;if(side||walk)player.rotation.y=Math.atan2(forwardX,forwardZ);
+      jumpV-=dt*18;jumpY+=jumpV*dt;if(jumpY<=groundY){jumpY=groundY;jumpV=0;jumpCount=0;}player.position.y=jumpY;
+      if(velocity.lengthSq()>.04){const targetRotation=Math.atan2(velocity.x,velocity.z),angleDelta=Math.atan2(Math.sin(targetRotation-player.rotation.y),Math.cos(targetRotation-player.rotation.y));player.rotation.y+=angleDelta*Math.min(1,10*dt);}
       if(objects.coins)objects.coins.forEach(c=>{if(c.visible&&c.position.distanceTo(player.position)<1.35){c.visible=false;collected++;score+=15;sfx('good');}});
-      if(hitCooldown<=0){for(const h of objects.hazards){if(h.position.distanceTo(player.position)<1.25){score=Math.max(0,score-8);player.position.copy(prev);hitCooldown=.75;sfx('bad');break;}}for(const e of objects.enemies){if(hitCooldown<=0&&e.position.distanceTo(player.position)<1.3){score=Math.max(0,score-15);player.position.copy(prev);hitCooldown=1;sfx('bad');break;}}}
-      const enemySpeed=spec.difficulty==='hard'?.15:spec.difficulty==='easy'?.055:.09;
-      objects.enemies.forEach(e=>{const bob=e.userData.boss?Math.sin(runTime*2+e.userData.phase)*.3:Math.sin(runTime*3+e.userData.phase)*.12;e.position.y=(e.userData.boss?1.05:.72)+bob;e.rotation.y+=dt*(e.userData.boss?1.4:2.2);if(e.position.distanceTo(player.position)<18){const target=new THREE.Vector3(player.position.x,e.position.y,player.position.z);e.position.lerp(target,dt*(e.userData.boss?enemySpeed*1.35:enemySpeed));}});
+      if(hitCooldown<=0){for(const h of objects.hazards){if(h.position.distanceTo(player.position)<1.25){score=Math.max(0,score-8);player.position.copy(prev);velocity.multiplyScalar(-.25);cameraShake=.18;hitCooldown=.75;sfx('bad');break;}}for(const e of objects.enemies){if(hitCooldown<=0&&e.position.distanceTo(player.position)<1.3){score=Math.max(0,score-15);player.position.copy(prev);velocity.multiplyScalar(-.35);cameraShake=.26;hitCooldown=1;sfx('bad');break;}}}
+      const enemySpeed=spec.difficulty==='hard'?.95:spec.difficulty==='easy'?.35:.62;
+      objects.enemies.forEach(e=>{const bob=e.userData.boss?Math.sin(runTime*2+e.userData.phase)*.3:Math.sin(runTime*3+e.userData.phase)*.12;e.position.y=(e.userData.boss?1.05:.72)+bob;e.rotation.y+=dt*(e.userData.boss?1.4:2.2);if(e.position.distanceTo(player.position)<18){const target=new THREE.Vector3(player.position.x,e.position.y,player.position.z);e.position.lerp(target,1-Math.exp(-dt*(e.userData.boss?enemySpeed*1.35:enemySpeed)));}});
       const reachedGoal=objects.goal&&objects.goal.position.distanceTo(player.position)<3;
       const objectiveComplete=spec.objective==='survive'?runTime>=45:spec.objective==='collect'?(collected>=spec.coinCount&&reachedGoal):reachedGoal;
       if(objectiveComplete){won=true;running=false;score+=100;if(typeof xp==='function')xp(30);$s('studioGameStatus').textContent=spec.objective==='survive'?'¡Sobreviviste! +100 puntos':spec.objective==='collect'?'¡Colección completa! +100 puntos':'¡Meta alcanzada! +100 puntos';toast('🏆 ¡Objetivo completado! +100 puntos');}
@@ -2041,6 +2047,7 @@ const Studio = (() => {
   }
   function bind(){
     addEventListener('beforeunload',persistRun);
+    addEventListener('blur',()=>{keys={};if(running&&!won){running=false;if($s('studioPlay'))$s('studioPlay').textContent='▶ Jugar';if($s('studioGameStatus'))$s('studioGameStatus').textContent='Juego pausado · vuelve a la ventana para continuar';}});
     $s('studioSave').addEventListener('click',saveToFolder);
     $s('studioRestore').addEventListener('click',restoreProject);
     $s('studioImport').addEventListener('click',importProject);
