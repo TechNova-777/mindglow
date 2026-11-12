@@ -1,4 +1,4 @@
-name: Deploy Mind Glow to Firebase
+name: Deploy Mind Glow frontend to Firebase
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
       - name: Descargar el repositorio
         uses: actions/checkout@v4
 
-      - name: Publicar en Firebase Hosting
+      - name: Publicar el frontend en Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'

@@ -1,32 +1,36 @@
-# IA externa de Mind Glow
+# Despliegue de Mind Glow
 
-Mind Glow responde con una IA externa mediante `api/ai.js`. La clave se lee solo en el servidor desde `AI_API_KEY`; nunca se incluye en `script.js` ni se envía al navegador.
+Mind Glow tiene el frontend público en Firebase Hosting y conserva la API de IA en Vercel.
 
-## Desarrollo local con Gemini
+## Desarrollo local
 
 1. Copia `.env.local.example` como `.env.local`.
-2. Pega tu clave de Google AI Studio en `AI_API_KEY`.
-3. Ejecuta `node server.js`; Mind Glow se abrirá automáticamente en el navegador. No abras `index.html` con Live Server: ese servidor no ejecuta `/api/ai`.
+2. Configura `AI_API_KEY`.
+3. Ejecuta `node server.js`.
 
-La interfaz ya llama a `/api/ai` para el chat, Game Studio y Glow Art.
+No abras `index.html` con Live Server si quieres probar la IA: ese servidor local no ejecuta `/api/ai`.
 
-## Producción en Vercel
+## Frontend principal: Firebase Hosting
 
-En el proyecto de Vercel agrega estas variables en Settings → Environment Variables:
+El sitio tradicional es `https://midglow.web.app`. La configuración está en `firebase.json` y `.firebaserc`.
 
-- `AI_API_KEY`: tu clave de Gemini.
-- `AI_API_URL`: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`.
-- `AI_MODEL`: `gemini-3.1-flash-lite`.
-- `AI_MAX_TOKENS`: `1200`.
+```powershell
+firebase deploy --only hosting:midglow --project santos7store
+```
 
-Para que el endpoint acepte solo el sitio público, agrega también `ALLOWED_ORIGIN` con el dominio de Mind Glow.
+Firebase publica solo los archivos estáticos del frontend. La API, archivos de desarrollo, secretos, herramientas y fuentes 3D quedan excluidos.
 
-Para Glow Art agrega también `AI_IMAGE_URL` y `AI_IMAGE_MODEL` como aparecen en `.env.local.example`.
+## API de IA: Vercel
 
-Después de guardar las variables, vuelve a desplegar. No pongas la clave en `index.html`, `script.js` ni en ninguna variable `VITE_*`/`NEXT_PUBLIC_*`.
+La interfaz publicada en `web.app` llama a `https://web-emprendimiento-eight.vercel.app/api/ai`.
+Configura en Vercel estas variables:
 
-## Importante sobre Firebase Hosting
+- `AI_API_KEY`
+- `AI_API_URL`
+- `AI_MODEL`
+- `AI_MAX_TOKENS`
+- `ALLOWED_ORIGINS` con `https://midglow.web.app,https://midglow.firebaseapp.com`
 
-El workflow actual de Firebase publica los archivos estáticos, pero Firebase Hosting por sí solo no ejecuta `api/ai.js`. Para que el chat use Gemini en producción, despliega este proyecto en Vercel o mueve `api/ai.js` a una Firebase Cloud Function y configura un rewrite. La configuración incluida en `vercel.json` deja lista la primera opción.
+Para Glow Art configura también `AI_IMAGE_URL` y `AI_IMAGE_MODEL`.
 
-El workflow `.github/workflows/deploy-vercel.yml` deja preparado el despliegue automático desde GitHub. Solo requiere crear el secreto `VERCEL_TOKEN` en Settings → Secrets and variables → Actions del repositorio.
+Los workflows `.github/workflows/deploy-firebase.yml` y `.github/workflows/deploy-vercel.yml` publican al actualizar `main`. No pongas claves en `index.html`, `script.js` ni en variables `VITE_*` o `NEXT_PUBLIC_*`.

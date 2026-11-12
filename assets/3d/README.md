@@ -1,7 +1,6 @@
-# Mind Glow 3D asset
+# Recurso 3D de Mind Glow
 
-- `mindglow-companion.blend`: escena editable de Blender 4.5 LTS.
-- `mindglow-companion.glb`: exportación glTF binaria usada por Game Studio.
-- `../../tools/create_mindglow_model.py`: script reproducible para regenerar ambos archivos.
+- `mindglow-companion.glb`: modelo que carga Game Studio en el navegador.
+- `mindglow-companion.blend`: escena editable de Blender, conservada como fuente.
 
-El modelo incluye un soldado de campo original con uniforme, chaleco táctico, casco, mochila, radio, rifle, botas y materiales de bosque. La escena `.blend` también contiene un pequeño bosque de muestra con iluminación natural; el `.glb` exporta solamente el personaje para usarlo dentro del juego.
+Las herramientas y vistas previas de Blender se mantienen fuera del proyecto de producción para no cargar archivos innecesarios en el despliegue.

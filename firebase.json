@@ -6,7 +6,27 @@
       "firebase.json",
       "firebase-debug.log",
       "**/.*",
-      "**/node_modules/**"
+      ".git/**",
+      ".github/**",
+      ".vercel/**",
+      ".firebase/**",
+      "**/node_modules/**",
+      "api/**",
+      "server.js",
+      "package.json",
+      "package-lock.json",
+      "vercel.json",
+      "DEPLOY.md",
+      "README.md",
+      ".env.example",
+      ".env.local.example",
+      "assets/3d/*.blend",
+      "assets/3d/README.md",
+      "tools/**",
+      "tutorial-frames/**",
+      "tutorial-preview.png",
+      "tutorial-mindglow.mp4",
+      "tutorial-mindglow.srt"
     ]
   }
 }

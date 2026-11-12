@@ -100,15 +100,27 @@ async function retrieveSources(query){
 
 module.exports = async function handler(req, res){
   const headers = req.headers || {};
+  const configuredOrigins = String(process.env.ALLOWED_ORIGINS || process.env.ALLOWED_ORIGIN || '')
+    .split(',').map(origin => origin.trim()).filter(Boolean);
+  const allowedOrigins = new Set([
+    'https://midglow.web.app',
+    'https://midglow.firebaseapp.com',
+    'https://web-emprendimiento-eight.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    ...configuredOrigins
+  ]);
+  const requestOrigin = headers.origin;
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
-  res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || headers.origin || "*");
+  if(requestOrigin && allowedOrigins.has(requestOrigin))
+    res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
   if(req.method === "OPTIONS") return res.status(204).end();
   if(req.method !== "POST") return json(res, 405, {error:"METHOD_NOT_ALLOWED"});
-  if(process.env.ALLOWED_ORIGIN && headers.origin && headers.origin !== process.env.ALLOWED_ORIGIN)
+  if(requestOrigin && !allowedOrigins.has(requestOrigin))
     return json(res, 403, {error:"ORIGIN_NOT_ALLOWED"});
 
   let body = req.body || {};

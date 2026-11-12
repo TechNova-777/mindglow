@@ -37,11 +37,15 @@
       <div class="brand-badge">✦</div>
       <p class="eyebrow">MIND GLOW 3.0 · SIGNATURE EXPERIENCE</p>
       <h1>Tu mente también<br><span>merece una experiencia.</span></h1>
-      <p class="welcome-copy">Calma, concentración, música original, Glow AI y Glow Art en un espacio diseñado para que tu mente se sienta cuidada.</p>
+      <p class="welcome-copy">Idea 3D, Glow AI, música, piano y el colegio San José Obrero en un solo espacio.</p>
       <div class="welcome-actions">
         <button class="btn primary xl" id="enterBtn">Entrar a Mind Glow <span>↗</span></button>
       </div>
-      <div class="trust-row"><span>✦ Diseño inmersivo</span><span>🔒 Privacidad local</span><span>🎧 Audio original</span></div>
+      <div class="welcome-auth" id="welcomeAuth">
+        <p id="welcomeAuthStatus">Inicia sesión con tu cuenta de Google para guardar tu perfil y tus reseñas.</p>
+        <div id="welcomeGoogleBtn"></div>
+      </div>
+      <div class="trust-row"><span>✦ Idea 3D</span><span>✦ Glow AI</span><span>🎧 Música y piano</span></div>
     </div>
   </section>
 
@@ -109,11 +113,11 @@
           <div class="hero-copy">
             <p class="eyebrow" id="heroEyebrow">BUENOS DÍAS · I.E. SAN JOSÉ OBRERO</p>
               <h1>Una app que <span>se siente viva.</span></h1>
-              <p class="lead">Mind Glow convierte el bienestar digital en una experiencia: juega, respira, estudia, escucha y habla con Glow AI.</p>
+              <p class="lead">Mind Glow reúne Idea 3D, Glow AI, música, piano y la comunidad de tu colegio.</p>
               <div class="hero-actions">
                 <button class="btn primary" data-view="studio">Crear juego 3D</button>
                 <button class="btn primary" data-view="ai">Hablar con Glow AI</button>
-                <button class="btn ghost" data-view="arcade">Explorar Arcade</button>
+                <button class="btn ghost" data-view="arcade">Tocar piano</button>
               </div>
               <div class="signal-row"><span>● Sistema en línea</span><span id="dailyStreak">Racha 0 días</span></div>
             </div>
@@ -126,13 +130,12 @@
 
           <div class="section-head"><div><p class="eyebrow">ACCESO RÁPIDO</p><h3>¿Qué necesitas ahora?</h3></div></div>
           <div class="quick-grid">
-            <button class="quick-card studio-quick-card" data-view="studio"><span>◈</span><b>Crear un juego</b><small>Glow Forge 3D</small></button>
-            <button class="quick-card" data-view="calm"><span>🌿</span><b>Calmarme</b><small>Zen Calma · respiración + sonido</small></button>
-            <button class="quick-card" data-view="focus"><span>🎯</span><b>Concentrarme</b><small>Deep Focus · Pomodoro flexible</small></button>
-            <button class="quick-card" data-view="arcade"><span>🎮</span><b>Despejarme</b><small>Arcade Rush · retos y récords</small></button>
-            <button class="quick-card" data-view="space"><span>🌌</span><b>Universo Glow</b><small>Tu universo evoluciona</small></button>
-            <button class="quick-card" data-view="chat"><span>💬</span><b>Comunidad Glow</b><small>Chat + stickers en vivo</small></button>
-            <button class="quick-card" data-view="wellness"><span>💚</span><b>Balance+</b><small>Test + progreso</small></button>
+            <button class="quick-card studio-quick-card" data-view="studio"><span>◈</span><b>Idea 3D</b><small>Crear un mundo jugable</small></button>
+            <button class="quick-card" data-view="calm"><span>🎧</span><b>Escuchar música</b><small>Música original Mind Glow</small></button>
+            <button class="quick-card" data-view="arcade"><span>🎹</span><b>Tocar piano</b><small>Piano Glow · melodías para aprender</small></button>
+            <button class="quick-card" data-view="ai"><span>AI</span><b>Hablar con Glow AI</b><small>Ideas, preguntas y creación</small></button>
+            <button class="quick-card" data-view="school"><span>⌂</span><b>Mi colegio</b><small>I.E. San José Obrero</small></button>
+            <button class="quick-card" data-view="profile"><span>✦</span><b>Mi progreso</b><small>Nivel, XP y logros</small></button>
           </div>
 
           <div class="glass panel streak-week">
@@ -152,9 +155,9 @@
               <div class="panel-label">HOY</div>
               <div class="stats-grid">
                 <div><b id="statCalm">0</b><small>min calma</small></div>
-                <div><b id="statFocus">0</b><small>focus</small></div>
                 <div><b id="statGames">0</b><small>juegos</small></div>
-                <div><b id="statTasks">0</b><small>tareas</small></div>
+                <div><b id="statXP">0</b><small>XP total</small></div>
+                <div><b id="statStreak">0</b><small>días seguidos</small></div>
               </div>
             </article>
           </div>
@@ -220,10 +223,10 @@
               </div>
               <div class="glass panel">
                 <div class="panel-label">ACCIONES</div>
-                <button class="action-tile" data-view="calm">🌿 Abrir Calma</button>
-                <button class="action-tile" data-view="focus">🎯 Abrir Focus</button>
-                <button class="action-tile" data-view="tasks">✓ Ver tareas</button>
-                <button class="action-tile" data-view="arcade">🎮 Jugar</button>
+                <button class="action-tile" data-view="studio">◈ Crear Idea 3D</button>
+                <button class="action-tile" data-view="calm">🎧 Abrir Música</button>
+                <button class="action-tile" data-view="arcade">🎹 Abrir Piano</button>
+                <button class="action-tile" data-view="school">⌂ Ver mi colegio</button>
               </div>
               <div class="glass panel">
                 <div class="panel-label">CONTEXTO</div>
@@ -234,8 +237,8 @@
         </section>
 
         <!-- ===== CALM ===== -->
-        <section class="view" id="view-calm">
-          <div class="page-title"><p class="eyebrow">ZEN CALMA</p><h1>Vuelve a tu <span>centro.</span></h1><p>Respiración guiada, sonidos ambientales y música original de Mind Glow.</p></div>
+        <section class="view music-view" id="view-calm">
+          <div class="page-title"><p class="eyebrow">MÚSICA MIND GLOW</p><h1>Escucha <span>música original.</span></h1><p>Tres pistas para acompañar tus ideas y mantener el foco.</p></div>
           <div class="calm-grid">
             <div class="glass breathing panel-large">
               <div id="breathCircle" class="breath-circle"><div><span id="breathPhase">LISTO</span><b id="breathTimer">01:00</b></div></div>
@@ -337,14 +340,10 @@
           </div>
         </section>
 
-        <section class="view" id="view-arcade">
-          <div class="page-title"><p class="eyebrow">GLOW ARCADE · V4</p><h1>Juega, <span>compite.</span></h1><p>Retos propios de ritmo, puntería, estrategia, memoria y fusión. Supera tu récord o gana al Rival CPU; pulsa <b>K</b> para descubrir un secreto.</p></div>
+        <section class="view piano-view" id="view-arcade">
+          <div class="page-title"><p class="eyebrow">PIANO GLOW</p><h1>Toca y <span>aprende.</span></h1><p>Un piano virtual con melodías para practicar a tu ritmo.</p></div>
           <div class="arcade-toolbar glass">
-            <div class="difficulty" id="difficulty">
-              <button class="active" data-level="easy">Fácil</button>
-              <button data-level="normal">Normal</button>
-              <button data-level="hard">Difícil</button>
-            </div>
+            <div class="panel-label">PIANO VIRTUAL · 37 TECLAS</div>
             <div class="arcade-stats">
               <span>🏆 Récord <b id="globalHigh">0</b></span>
               <span>🎮 Partidas <b id="globalGames">0</b></span>
@@ -642,7 +641,7 @@
       <button id="gameClose" class="modal-close">×</button>
       <div class="game-modal-head">
         <span id="gameIcon">🫧</span>
-        <div><p class="eyebrow">GLOW ARCADE</p><h2 id="gameName">Bubble Calm</h2><small id="gameDesc"></small></div>
+        <div><p class="eyebrow">PIANO GLOW</p><h2 id="gameName">Piano Glow</h2><small id="gameDesc"></small></div>
       </div>
       <div id="gameBody"></div>
     </div>

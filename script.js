@@ -1,7 +1,7 @@
 'use strict';
 /* ============================================================
    MIND GLOW 3.0 — Motor principal
-   Para login con Google: pega tu Client ID OAuth en la línea 9.
+   Para login con Google: pega tu Client ID OAuth en la línea 7.
    console.cloud.google.com → Credenciales → OAuth (tipo Web)
    ============================================================ */
 const GOOGLE_CLIENT_ID = ''; // ← PEGA AQUÍ TU CLIENT ID DE GOOGLE
@@ -16,7 +16,9 @@ const KEY = 'mindGlow3';
 const USERS_KEY = 'mindGlowUsers3';
 const ACTIVE_USER_KEY = 'mindGlowActiveUser3';
 const AI_DB_KEY = 'mindGlowKnowledge3';
-const AI_REMOTE_URL = '/api/ai';
+const AI_REMOTE_URL = /(?:\.web\.app|\.firebaseapp\.com)$/i.test(location.hostname)
+  ? 'https://web-emprendimiento-eight.vercel.app/api/ai'
+  : '/api/ai';
 
 function today(){ return new Date().toISOString().slice(0,10); }
 function fmt(s){ if(!Number.isFinite(s)) return '0:00'; return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
@@ -278,23 +280,33 @@ function ensureStreak(){
 }
 
 /* ---------- Navegación ---------- */
-const NAV = [['home','✦','Mi Glow'],['studio','◈','Glow Forge'],['ai','✧','Glow AI'],['calm','☾','Zen Calma'],
-  ['wellness','♥','Balance+'],['arcade','⚡','Arcade Rush'],['focus','◎','Deep Focus'],
-  ['tasks','✓','Misiones'],['journal','✎','Bitácora'],['chat','☁','Comunidad Glow'],
-  ['school','⌂','Mi Cole'],['space','✦','Universo Glow'],['profile','◉','Mi Perfil']];
+const NAV = [
+  ['home','✦','Inicio'],
+  ['studio','3D','Idea 3D'],
+  ['ai','AI','Glow AI'],
+  ['calm','♪','Música'],
+  ['arcade','P','Piano'],
+  ['school','⌂','Mi colegio']
+];
+// Las vistas secundarias siguen disponibles desde Glow AI y acciones internas,
+// pero no saturan el menú principal.
+const KEPT_VIEWS = new Set(NAV.map(item => item[0]).concat([
+  'settings','profile','wellness','focus','tasks','journal','space','chat'
+]));
 
 function buildNav(){
   $('#navList').innerHTML = NAV.map(n =>
     '<button class="nav-item" data-view="'+n[0]+'" aria-label="'+n[2]+'"><span class="nav-logo nav-logo-'+n[0]+'" aria-hidden="true">'+n[1]+'</span><b>'+n[2]+'</b></button>').join('');
 }
 function showView(v){
+  if(!KEPT_VIEWS.has(v)) v = 'home';
   if(v !== 'studio' && document.body.classList.contains('studio-open')) Studio.saveRun();
   $$('.view').forEach(x => x.classList.toggle('active', x.id === 'view-'+v));
   $$('.nav-item').forEach(x => x.classList.toggle('active', x.dataset.view === v));
   document.body.classList.toggle('studio-open', v === 'studio');
   const labels = {}; NAV.forEach(n => labels[n[0]] = n[2]);
   labels.settings = 'Ajustes';
-  const navItem = NAV.find(n => n[0] === v);
+  const navItem = NAV.find(n => n[0] === v) || (v === 'profile' ? ['profile','◉','Mi cuenta'] : null);
   $('#pageTitle').innerHTML = navItem
     ? '<span class="page-title-logo page-title-logo-'+navItem[0]+'" aria-hidden="true">'+navItem[1]+'</span>'+esc(navItem[2])
     : '<span class="page-title-logo page-title-logo-settings" aria-hidden="true">⚙</span>Configuración';
@@ -323,9 +335,9 @@ function updateUI(){
   $('#spaceLevel').textContent = state.level;
   $('#spaceXP').textContent = state.xp;
   $('#statCalm').textContent = state.calm;
-  $('#statFocus').textContent = state.focus;
   $('#statGames').textContent = state.games;
-  $('#statTasks').textContent = state.tasks.filter(t=>t.done).length;
+  $('#statXP').textContent = state.xp;
+  $('#statStreak').textContent = state.streak;
   $('#dailyStreak').textContent = 'Racha ' + state.streak + ' días';
   const scNum = $('#streakNum'); if(scNum) scNum.textContent = state.streak;
   renderWeekDots();
@@ -365,8 +377,30 @@ function renderUser(){
   $('#heroEyebrow').textContent = 'BUENOS DÍAS' + (f ? ', '+f.toUpperCase() : '') + ' · I.E. SAN JOSÉ OBRERO';
 }
 
-/* ---------- Cuenta: Gmail + nombre manual ---------- */
+/* ---------- Cuenta: Google + perfil local ---------- */
+function renderWelcomeAuth(){
+  const wrap = $('#welcomeGoogleBtn'), status = $('#welcomeAuthStatus');
+  if(!wrap || !status) return;
+  wrap.innerHTML = '';
+  if(state.user && state.user.email){
+    status.textContent = 'Sesión iniciada como '+state.user.name+'. Tu perfil y tus reseñas quedan asociados a esta cuenta en este dispositivo.';
+    return;
+  }
+  if(!(GOOGLE_CLIENT_ID && window.google && window.google.accounts && window.google.accounts.id)){
+    status.textContent = 'Para activar el acceso con Google, configura GOOGLE_CLIENT_ID en la línea 7 de script.js y autoriza el dominio de tu web.';
+    return;
+  }
+  status.textContent = 'Continúa con tu cuenta de Google:';
+  try{
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential });
+    google.accounts.id.renderButton(wrap,
+      { theme:'filled_black', size:'large', text:'continue_with', shape:'pill', locale:'es' });
+  }catch(e){
+    status.textContent = 'No se pudo cargar el acceso de Google. Revisa el Client ID y el dominio autorizado.';
+  }
+}
 function authInit(){
+  renderWelcomeAuth();
   const area = $('#authArea'); if(!area) return;
   area.innerHTML = '';
   if(state.user && state.user.name){
@@ -377,14 +411,14 @@ function authInit(){
     $('#switchUserBtn').addEventListener('click', signOut);
     return;
   }
-  const manual =
+  const manual = GOOGLE_CLIENT_ID ? '' :
     '<form class="auth-manual" id="manualForm">'+
       '<input class="text-input" id="manualName" placeholder="Tu nombre" required>'+
-      '<button class="btn primary">Entrar con mi nombre</button></form>';
+      '<button class="btn primary">Continuar como invitado</button></form>';
   const hint =
     '<p class="auth-hint">💡 Para «Continuar con Google»: crea un ID de cliente OAuth (tipo Web) en '+
     'console.cloud.google.com, autoriza el origen donde alojes la web y pégalo en GOOGLE_CLIENT_ID '+
-    '(línea 9 de script.js).</p>';
+    '(línea 7 de script.js).</p>';
 
   if(GOOGLE_CLIENT_ID && window.google && window.google.accounts && window.google.accounts.id){
     area.innerHTML = '<div id="googleBtnWrap"></div>' + manual + hint;
@@ -397,7 +431,7 @@ function authInit(){
     area.innerHTML = manual + hint;
   }
   const mf = $('#manualForm');
-  mf.addEventListener('submit', ev => {
+  if(mf) mf.addEventListener('submit', ev => {
     ev.preventDefault();
     const n = $('#manualName').value.trim();
     if(n) setUser({ name:n });
@@ -550,7 +584,7 @@ const KNOWLEDGE_SEED = [
   {id:'app-tasks',category:'mind glow',title:'Tareas',keywords:['como uso tareas','crear tarea','lista de tareas','organizar mis tareas'],answer:'En Tareas divide algo grande en pasos pequeños y marca cada paso al terminar. Un buen paso empieza con un verbo: “leer”, “resolver”, “ensayar” o “entregar”.',actions:[['Abrir Tareas','tasks']]},
   {id:'app-focus',category:'mind glow',title:'Focus',keywords:['como uso focus','temporizador','modo focus','concentracion en mind glow'],answer:'Focus te ayuda a trabajar en bloques con pausas. Antes de iniciar escribe qué resultado quieres obtener y deja una sola tarea visible.',actions:[['Abrir Focus','focus']]},
   {id:'app-journal',category:'mind glow',title:'Diario',keywords:['como uso diario','escribir diario','diario personal','anotar sentimientos'],answer:'Usa el Diario para descargar pensamientos, registrar ánimo y convertir una preocupación en un siguiente paso. Es privado dentro de tu perfil local; evita escribir datos sensibles.',actions:[['Abrir Diario','journal']]},
-  {id:'app-arcade',category:'mind glow',title:'Arcade',keywords:['que juegos hay','juegos de mind glow','arcade','quiero jugar','juegos competitivos','juegos faciles'],answer:'Arcade reúne 14 retos propios: Keyboard, Focus Tap, Glow Duel, Neon Stack, Target Arena, Color Rush, Merge Blitz, Lane Rush, Quiz Clash, Word Sprint, Memory Glow, Food Catch, Glow Canvas y Secret Run. Hay ritmo, reflejos, estrategia, memoria, palabras y duelos contra Capi; úsalo como descanso con límite, no como una distracción infinita.',actions:[['Abrir Arcade','arcade']]},
+  {id:'app-arcade',category:'mind glow',title:'Piano Glow',keywords:['que juegos hay','juegos de mind glow','arcade','quiero jugar','piano','melodias'],answer:'Piano Glow es el espacio musical de Mind Glow: 37 teclas, melodías guiadas y práctica libre. Úsalo como una pausa creativa y vuelve a tus objetivos cuando estés listo.',actions:[['Abrir Piano','arcade']]},
   {id:'app-studio',category:'mind glow',title:'Game Studio',keywords:['game studio','crear juego','juego 3d','generar mundo'],answer:'Game Studio convierte una descripción en un mundo 3D jugable dentro de la app. Escribe el escenario, objetivo y estilo; después puedes pedir cambios como “añade enemigos” o “haz el mapa más grande”.',actions:[['Abrir Game Studio','studio']]},
   {id:'app-multiuser',category:'mind glow',title:'Perfiles de usuario',keywords:['varios usuarios','multiusuario','otro usuario','cambiar usuario','cambio de usuario','perfiles'],answer:'Mind Glow guarda cada perfil con un identificador separado: el correo de Google cuando existe o el nombre elegido en el acceso manual. Así las tareas, progreso, memoria y diario de una persona no se mezclan con los de otra en el mismo navegador.',actions:[['Abrir Perfil','profile']]}
 ];
@@ -891,7 +925,7 @@ function aiInit(){
       intent='study'; reply='Método: divide en 3 pasos concretos y añádelos a Tareas.\nEjemplo: 1) Leer el tema 2) Hacer resumen 3) Ensayar en voz alta.\nCada tarea completada da +15 XP 😉';
       actions=[['✓ Añadir tareas','tasks']];
     } else if(/juego|jugar|despej|aburrid/.test(s)){
-      intent='game'; reply='En Arcade: Keyboard (relajante 🎹), Food Catch (reflejos 🍎), Memory Glow (memoria 🧠), Secret Run (habilidad 👾), Focus Tap y Glow Canvas. Los juegos ahora dan más XP y duran más.';
+      intent='game'; reply='En Piano Glow puedes tocar libremente o aprender melodías guiadas en 37 teclas. Es una pausa creativa breve dentro de Mind Glow.';
       actions=[['🎮 Abrir Arcade','arcade']];
     } else if(/progreso|nivel|xp|racha|puntos|cuanto llevo/.test(s)){
       intent='progress';
@@ -1399,35 +1433,54 @@ function feedbackInit(){
     stars.forEach(x => x.classList.toggle('on', parseInt(x.dataset.rating,10) <= fbRating));
     $('#feedbackRatingText').textContent = RATE_TXT[fbRating];
   }));
-  $('#feedbackSend').addEventListener('click', () => {
+  const sendButton = $('#feedbackSend');
+  sendButton.addEventListener('click', async () => {
     if(!fbRating) return toast('Elige una calificación primero');
-    state.feedback.unshift({ rating:fbRating,
+    const entry = { rating:fbRating,
       like:$('#feedbackLike').value, improve:$('#feedbackImprove').value,
-      text:$('#feedbackText').value.trim().slice(0,500), date:today() });
-    save(); sfx('good'); toast('💬 ¡Gracias por tu opinión!');
-    if(FORMSPREE_ID){
-      fetch('https://formspree.io/f/'+FORMSPREE_ID, {
+      text:$('#feedbackText').value.trim().slice(0,500), date:today(),
+      user:state.user && state.user.name ? state.user.name : 'Invitado',
+      email:state.user && state.user.email ? state.user.email : '' };
+    state.feedback.unshift(entry);
+    save(); renderFeedback();
+    if(!FORMSPREE_ID){
+      $('#feedbackStatus').textContent = '⚠️ Guardado solo en este dispositivo: falta configurar el formulario de correo.';
+      return toast('Falta configurar el formulario de correo');
+    }
+    sendButton.disabled = true;
+    sendButton.textContent = 'Enviando…';
+    try{
+      const response = await fetch('https://formspree.io/f/'+FORMSPREE_ID, {
         method:'POST',
         headers:{ 'Accept':'application/json', 'Content-Type':'application/json' },
         body: JSON.stringify({
-          _subject: '⭐ Nuevo comentario Mind Glow ('+fbRating+'/5)',
-          calificacion: fbRating+' de 5 estrellas',
-          les_gusto: $('#feedbackLike').value || '(no respondió)',
-          mejorar: $('#feedbackImprove').value || '(no respondió)',
-          comentario: $('#feedbackText').value.trim() || '(sin comentario)',
-          fecha: today()
+          _subject: '⭐ Nuevo comentario Mind Glow ('+entry.rating+'/5)',
+          _replyto: entry.email || undefined,
+          usuario: entry.user,
+          email: entry.email || '(sin cuenta)',
+          calificacion: entry.rating+' de 5 estrellas',
+          les_gusto: entry.like || '(no respondió)',
+          mejorar: entry.improve || '(no respondió)',
+          comentario: entry.text || '(sin comentario)',
+          fecha: entry.date
         })
-      })
-      .then(r => r.ok ? toast('📨 ¡Enviado al equipo Mind Glow!') : Promise.reject())
-      .catch(() => toast('Guardado en este dispositivo (sin conexión)'));
+      });
+      const result = await response.json().catch(() => ({}));
+      if(!response.ok) throw new Error(result.error || 'HTTP '+response.status);
+      $('#feedbackStatus').textContent = '✅ Enviado al correo configurado en Formspree y guardado localmente.';
+      toast('📨 ¡Reseña enviada!');
+      $('#feedbackLike').value=''; $('#feedbackImprove').value=''; $('#feedbackText').value='';
+      fbRating=0;
+      stars.forEach(x => x.classList.remove('on'));
+      $('#feedbackRatingText').textContent = 'Elige una calificación';
+    }catch(error){
+      $('#feedbackStatus').textContent = '⚠️ No se pudo enviar ('+error.message+'). La reseña quedó guardada solo en este dispositivo.';
+      toast('No se pudo enviar la reseña');
+    }finally{
+      sendButton.disabled = false;
+      sendButton.textContent = 'Enviar opinión';
+      renderFeedback();
     }
-    $('#feedbackStatus').textContent = '✅ Guardado ('+state.feedback.length+
-      ' opinió'+(state.feedback.length>1?'nes':'n')+' en este dispositivo). Aparecen abajo ↓';
-    $('#feedbackLike').value=''; $('#feedbackImprove').value=''; $('#feedbackText').value='';
-    fbRating=0;
-    stars.forEach(x => x.classList.remove('on'));
-    $('#feedbackRatingText').textContent = 'Elige una calificación';
-    renderFeedback();
   });
   $('#feedbackExport').addEventListener('click', () => {
     if(!state.feedback.length) return toast('Todavía no has enviado opiniones');
@@ -2083,425 +2136,11 @@ const Studio = (() => {
 })();
 
 /* ---------- ARCADE: nucleo ---------- */
-let difficulty = 'easy';
 let game = { name:'', active:false, cleanup:null, paused:false };
 const games = {
-  'Piano Glow'   : { icon:'🎹', desc:'Piano virtual de 37 teclas con canciones para aprender.',           badge:'APRENDE', start:gKeyboard },
-  'Focus Tap'    : { icon:'🎯', desc:'Objetivos rápidos con racha de aciertos.',                       badge:'REFLEJOS', start:gFocusTap },
-  'Glow Duel'    : { icon:'⚡', desc:'Compite contra Capi: gana quien reaccione más rápido.',            badge:'VS CPU',   start:gGlowDuel },
-  'Neon Stack'   : { icon:'🧱', desc:'Apila bloques al milímetro antes de que gane el rival.',           badge:'RACHA',    start:gNeonStack },
-  'Target Arena' : { icon:'🏹', desc:'Puntería, combo y precisión contra un rival automático.',          badge:'VS CPU',   start:gTargetArena },
-  'Color Rush'   : { icon:'🎨', desc:'Conquista el tablero antes que Capi en una carrera de clics.',    badge:'VS CPU',   start:gColorRush },
-  'Merge Blitz'  : { icon:'💎', desc:'Une fichas iguales, sube el multiplicador y supera al CPU.',      badge:'COMBO',    start:gMergeBlitz },
-  'Lane Rush'    : { icon:'🏎️', desc:'Cambia de carril, esquiva obstáculos y gana la carrera.',          badge:'RUNNER',   start:gLaneRush },
-  'Quiz Clash'   : { icon:'🧩', desc:'Responde preguntas rápidas antes de que Capi complete el quiz.',  badge:'VS CPU',   start:gQuizClash },
-  'Word Sprint'  : { icon:'⌨️', desc:'Ordena palabras, mantén la racha y cruza la meta primero.',       badge:'VELOCIDAD',start:gWordSprint },
-  'Memory Glow'  : { icon:'🧠', desc:'Memoriza la secuencia que crece ronda a ronda.',                   badge:'MEMORIA',  start:gMemory },
-  'Food Catch'   : { icon:'🍎', desc:'Atrapa la comida que cae… ¡si atrapas una lata, pierdes!',        badge:'VS CPU',   start:gFoodCatch },
-  'Glow Canvas'  : { icon:'🪐', desc:'Dibuja patrones relajantes sin presión.',                          badge:'CREATIVO', start:gCanvas },
-  'Secret Run'   : { icon:'👾', desc:'Guía al personaje con mouse o dedo y esquiva hasta la meta.',      badge:'RUNNER',   start:gSecretRun }
+  'Piano Glow': { icon:'🎹', desc:'Piano virtual de 37 teclas con canciones para aprender.', badge:'APRENDE', start:gKeyboard }
 };
-function gGlowDuel(){
-  const aiDelay={easy:1150,normal:850,hard:620}[difficulty]; let you=0, capi=0, round=0, aiTimer;
-  const body=shell('<div class="duel-score"><div>🧑‍🚀 Tú <b id="youScore">0</b></div><div class="duel-vs">VS</div><div>🦫 Capi <b id="capiScore">0</b></div></div><div class="game-board duel-board" id="duelBoard"><button class="duel-target" id="duelTarget">¡LISTO!</button></div><p class="game-message" id="duelMsg">Pulsa el objetivo cuando aparezca. Capi también juega.</p>');
-  const board=body.querySelector('#duelBoard'), target=body.querySelector('#duelTarget'), msg=body.querySelector('#duelMsg');
-  const next=()=>{ if(!game.active)return; round++; target.textContent='⚡'; target.style.left=(10+Math.random()*75)+'%'; target.style.top=(10+Math.random()*68)+'%'; target.classList.add('duel-live'); setTimeout(()=>target.classList.remove('duel-live'),500); };
-  target.addEventListener('pointerdown',()=>{if(!game.active||game.paused||!target.classList.contains('duel-live'))return;you++; target.classList.remove('duel-live'); body.querySelector('#youScore').textContent=you; sfx('good'); msg.textContent='¡Punto para ti!'; if(you>=7){clearInterval(aiTimer);finishGame(you*10,45,'Ganaste el duelo contra Capi 🏆');}else setTimeout(next,240);});
-  aiTimer=setInterval(()=>{if(game.paused||!game.active)return;capi++;body.querySelector('#capiScore').textContent=capi; if(capi>=7){clearInterval(aiTimer);finishGame(you*10,10,'Capi ganó esta ronda. ¡Reintenta y supéralo!');}},aiDelay);
-  next(); game.cleanup=()=>clearInterval(aiTimer);
-}
-/* ---------- Juego: NEON STACK ---------- */
-function gNeonStack(){
-  const cfg={easy:{speed:155,cpu:.22},normal:{speed:205,cpu:.31},hard:{speed:260,cpu:.42}}[difficulty];
-  const body=shell('<div class="game-board stack-board"><canvas id="stackCv"></canvas></div>'+
-    '<p class="game-message">Pulsa o toca para soltar el bloque. Alinea 10 capas antes que el Rival CPU.</p>');
-  const cvs=body.querySelector('#stackCv');
-  let env=fitCanvas(cvs),ctx=env.ctx,W=env.w,H=env.h;
-  let tower=[{x:W/2-72,w:144,y:H-42}], moving=null, level=1, score=0, cpu=0;
-  let rafId=null,last=performance.now(),ended=false;
-  function resize(){env=fitCanvas(cvs);ctx=env.ctx;W=env.w;H=env.h;}
-  function nextBlock(){
-    const previous=tower[tower.length-1];
-    moving={x:20,w:Math.max(44,previous.w-(difficulty==='hard'?10:7)),y:H-42-level*26,dir:1};
-  }
-  function end(win,msg){
-    if(ended)return; ended=true; cancelAnimationFrame(rafId);
-    if(win) finishGame(score,50,msg);
-    else offerRetry(msg+' Puntuación: '+score+'.');
-  }
-  function place(){
-    if(ended||!game.active||game.paused||!moving)return;
-    const previous=tower[tower.length-1],left=Math.max(moving.x,previous.x),right=Math.min(moving.x+moving.w,previous.x+previous.w),overlap=right-left;
-    if(overlap<22){sfx('bad');end(false,'El bloque quedó fuera de la torre.');return;}
-    tower.push({x:left,w:overlap,y:moving.y});
-    score+=Math.round(overlap*.3)+level*12; level++; sfx('good');
-    if(level>10){end(true,'¡Torre perfecta! Superaste 10 capas antes que Capi 🏆');return;}
-    nextBlock();
-  }
-  function draw(){
-    const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#111a36');bg.addColorStop(1,'#0b1021');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-    ctx.strokeStyle='rgba(139,124,255,.12)';ctx.lineWidth=1;
-    for(let y=H-42;y>22;y-=26){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    tower.forEach((block,i)=>{ctx.fillStyle='hsl('+(245+i*18)+' 88% '+(66-i*.7)+'%)';ctx.fillRect(block.x,block.y,block.w,22);ctx.fillStyle='rgba(255,255,255,.22)';ctx.fillRect(block.x,block.y,block.w,3);});
-    if(moving){ctx.fillStyle='hsl('+(170+level*14)+' 88% 66%)';ctx.shadowColor='#51e0c0';ctx.shadowBlur=18;ctx.fillRect(moving.x,moving.y,moving.w,22);ctx.shadowBlur=0;}
-    ctx.fillStyle='rgba(255,255,255,.68)';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('TU · '+level+'/10 capas',14,18);
-    ctx.textAlign='right';ctx.fillStyle='#ffb84d';ctx.fillText('CPU · '+Math.min(10,Math.floor(cpu))+'/10',W-14,18);
-    ctx.fillStyle='rgba(255,255,255,.1)';ctx.fillRect(14,25,W-28,5);ctx.fillStyle='#ffb84d';ctx.fillRect(14,25,(W-28)*Math.min(1,cpu/10),5);
-  }
-  function loop(ts){
-    if(ended||!game.active)return;
-    const dt=Math.min(.05,(ts-last)/1000);last=ts;
-    if(!game.paused){
-      moving.x+=moving.dir*cfg.speed*dt;
-      if(moving.x<=10){moving.x=10;moving.dir=1;}
-      if(moving.x+moving.w>=W-10){moving.x=W-10-moving.w;moving.dir=-1;}
-      cpu+=dt*cfg.cpu;
-      if(cpu>=10&&level<10){end(false,'El Rival CPU construyó su torre primero 🤖');return;}
-    }
-    draw();hud(score,'Capa '+Math.min(level,10)+'/10 · CPU '+Math.min(10,Math.floor(cpu))+'/10');rafId=requestAnimationFrame(loop);
-  }
-  cvs.addEventListener('pointerdown',place);
-  const kd=e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();place();}};
-  document.addEventListener('keydown',kd);body.appendChild(pauseBtn());nextBlock();hud(0,'Capa 1/10 · CPU 0/10');rafId=requestAnimationFrame(loop);
-  game.cleanup=()=>{ended=true;cancelAnimationFrame(rafId);document.removeEventListener('keydown',kd);};
-}
-/* ---------- Juego: TARGET ARENA ---------- */
-function gTargetArena(){
-  const cfg={easy:{time:38,size:58,cpu:1450},normal:{time:32,size:50,cpu:1080},hard:{time:27,size:42,cpu:820}}[difficulty];
-  const body=shell('<div class="game-board arena-board" id="targetArena"><div class="arena-score"><span>🏹 Tú <b id="arenaYou">0</b></span><span>🤖 CPU <b id="arenaCpu">0</b></span><span>⏱ <b id="arenaTime">'+cfg.time+'</b></span></div><button type="button" class="game-target arena-target" id="arenaTarget">✦</button></div>'+
-    '<p class="game-message">Acierta 20 objetivos y construye un combo. El CPU no se detiene.</p>');
-  const board=body.querySelector('#targetArena'),target=body.querySelector('#arenaTarget');
-  let you=0,cpu=0,time=cfg.time,combo=0,timer=null,cpuTimer=null,ended=false;
-  function render(){body.querySelector('#arenaYou').textContent=you;body.querySelector('#arenaCpu').textContent=cpu;body.querySelector('#arenaTime').textContent=time;hud(you,'Combo '+combo+' · Tú '+you+' / CPU '+cpu);}
-  function end(win,msg){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);target.remove();if(win)finishGame(you*10+combo*3,45,msg);else offerRetry(msg+' Tu puntuación: '+you+'.');}
-  function place(){
-    if(ended||!game.active)return;
-    target.style.width=cfg.size+'px';target.style.height=cfg.size+'px';target.style.left=(10+Math.random()*78)+'%';target.style.top=(22+Math.random()*66)+'%';target.textContent=combo>4?'⚡':'✦';
-  }
-  target.addEventListener('pointerdown',()=>{if(ended||!game.active||game.paused)return;you++;combo++;sfx('good');place();if(you>=20)end(true,'¡Arena conquistada! Tu combo dejó atrás al CPU 🏆');else render();});
-  timer=setInterval(()=>{if(ended||game.paused)return;time--;render();if(time<=0)end(you>cpu,'Tiempo. '+(you>cpu?'Ganaste por precisión 🏆':'El CPU tuvo mejor puntería 🤖'));},1000);
-  cpuTimer=setInterval(()=>{if(ended||game.paused)return;cpu++;if(cpu>=20)end(false,'El CPU llegó a 20 aciertos primero 🤖');else render();},cfg.cpu);
-  body.appendChild(pauseBtn());place();render();
-  game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);document.removeEventListener('keydown',()=>{});};
-}
-/* ---------- Juego: COLOR RUSH ---------- */
-function gColorRush(){
-  const cfg={easy:{time:32,cpu:980},normal:{time:27,cpu:760},hard:{time:23,cpu:570}}[difficulty];
-  const body=shell('<div class="game-board color-rush-board"><div class="conquest-score"><span>🎨 Tú <b id="rushYou">0</b></span><span>🤖 Capi <b id="rushCpu">0</b></span><span>⏱ <b id="rushTime">'+cfg.time+'</b></span></div><div class="conquest-grid" id="rushGrid"></div></div>'+
-    '<p class="game-message">Toma casillas libres o roba las de Capi. Quien tenga más territorio cuando acabe el tiempo gana.</p>');
-  const grid=body.querySelector('#rushGrid');let cells=[],you=0,cpu=0,time=cfg.time,timer=null,cpuTimer=null,ended=false,combo=0;
-  for(let i=0;i<36;i++){const c=document.createElement('button');c.type='button';c.className='conquest-cell';c.setAttribute('aria-label','Casilla '+(i+1));grid.appendChild(c);cells.push(c);}
-  function recount(){you=cells.filter(c=>c.dataset.owner==='you').length;cpu=cells.filter(c=>c.dataset.owner==='cpu').length;body.querySelector('#rushYou').textContent=you;body.querySelector('#rushCpu').textContent=cpu;hud(you,'Territorio · Tú '+you+' / Capi '+cpu+' · '+time+'s');}
-  function claim(c,owner){const old=c.dataset.owner;if(old===owner)return;if(old==='you')you--;if(old==='cpu')cpu--;c.dataset.owner=owner;c.classList.remove('owned-you','owned-cpu');c.classList.add(owner==='you'?'owned-you':'owned-cpu');if(owner==='you')you++;else cpu++;}
-  function end(win,msg){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);if(win)finishGame(you*12+combo*2,40,msg);else offerRetry(msg+' Territorio: '+you+' vs '+cpu+'.');}
-  cells.forEach(c=>c.addEventListener('pointerdown',()=>{if(ended||game.paused||!game.active)return;claim(c,'you');combo++;sfx('good');recount();if(you>20)end(true,'¡Dominaste el tablero! Ganaste con '+you+' casillas 🏆');}));
-  cpuTimer=setInterval(()=>{if(ended||game.paused)return;const choices=cells.filter(c=>c.dataset.owner!=='cpu');if(choices.length)claim(choices[Math.floor(Math.random()*choices.length)],'cpu');recount();if(cpu>20)end(false,'Capi tomó el control del tablero 🤖');},cfg.cpu);
-  timer=setInterval(()=>{if(ended||game.paused)return;time--;recount();if(time<=0)end(you>=cpu,'Tiempo. '+(you>=cpu?'Tu estrategia ganó 🏆':'Capi terminó con más casillas 🤖'));},1000);
-  body.appendChild(pauseBtn());recount();
-  game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);};
-}
-/* ---------- Juego: MERGE BLITZ ---------- */
-function gMergeBlitz(){
-  const cfg={easy:{time:48,cpu:7},normal:{time:42,cpu:10},hard:{time:36,cpu:13}}[difficulty],goal=420;
-  const body=shell('<div class="game-board merge-board"><div class="merge-score"><span>💎 Tú <b id="mergeYou">0</b></span><span>🤖 CPU <b id="mergeCpu">0</b></span><span>⏱ <b id="mergeTime">'+cfg.time+'</b></span></div><div class="merge-grid" id="mergeGrid"></div></div>'+
-    '<p class="game-message" id="mergeMsg">Elige dos fichas con el mismo número para fusionarlas. Llega a '+goal+' puntos antes que el CPU.</p>');
-  const grid=body.querySelector('#mergeGrid'),msg=body.querySelector('#mergeMsg');let values=[],cells=[],selected=-1,score=0,cpu=0,time=cfg.time,timer=null,cpuTimer=null,ended=false;
-  const spawn=()=>[1,1,1,2,2,4][Math.floor(Math.random()*6)];
-  for(let i=0;i<16;i++){values.push(spawn());const c=document.createElement('button');c.type='button';c.className='merge-tile';grid.appendChild(c);cells.push(c);}
-  function render(){cells.forEach((c,i)=>{const v=values[i];c.dataset.value=v;c.classList.toggle('selected',selected===i);c.innerHTML='<strong>'+v+'</strong><small>'+(selected===i?'Elegida':'Fusionar')+'</small>';});body.querySelector('#mergeYou').textContent=score;body.querySelector('#mergeCpu').textContent=cpu;body.querySelector('#mergeTime').textContent=time;hud(score,'Tú '+score+' / CPU '+cpu);}
-  function end(win,msgText){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);if(win)finishGame(score,50,msgText);else offerRetry(msgText+' Puntuación: '+score+'.');}
-  cells.forEach((c,i)=>c.addEventListener('pointerdown',()=>{if(ended||game.paused||!game.active)return;const v=values[i];if(selected<0){selected=i;msg.textContent='Ahora elige otra ficha con el mismo número.';render();return;}if(selected===i){selected=-1;render();return;}if(values[selected]===v){values[selected]=v*2;values[i]=spawn();score+=values[selected]*5+10;sfx('good');msg.textContent='¡Fusión! El multiplicador sube.';selected=-1;if(score>=goal){end(true,'¡Combo de fusión! Superaste al CPU 💎');return;}render();}else{selected=i;msg.textContent='No coinciden. Elige otra ficha del mismo valor.';render();}}));
-  cpuTimer=setInterval(()=>{if(ended||game.paused)return;cpu+=cfg.cpu;render();if(cpu>=goal)end(false,'El CPU completó su laboratorio antes 🤖');},1000);
-  timer=setInterval(()=>{if(ended||game.paused)return;time--;render();if(time<=0)end(score>=cpu,'Tiempo. '+(score>=cpu?'Tu laboratorio ganó 🏆':'El CPU terminó con más puntos 🤖'));},1000);
-  body.appendChild(pauseBtn());render();
-  game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);};
-}
-/* ---------- Juego: LANE RUSH ---------- */
-function gLaneRush(){
-  const cfg={easy:{speed:150,cpu:.38,spawn:1.1},normal:{speed:190,cpu:.52,spawn:.9},hard:{speed:235,cpu:.68,spawn:.72}}[difficulty],goal=14;
-  const body=shell('<div class="game-board lane-board"><canvas id="laneCv"></canvas></div><div class="lane-controls"><button type="button" data-lane="0">◀ Izquierda</button><button type="button" data-lane="1">Centro</button><button type="button" data-lane="2">Derecha ▶</button></div>'+
-    '<p class="game-message">Usa ← → o los botones. Esquiva '+goal+' obstáculos antes que el Rival CPU.</p>');
-  const cvs=body.querySelector('#laneCv');let env=fitCanvas(cvs),ctx=env.ctx,W=env.w,H=env.h;
-  let lane=1,score=0,cpu=0,obstacles=[],spawnT=0,rafId=null,last=performance.now(),ended=false;
-  const laneX=i=>W*(.25+i*.25);
-  function move(dir){lane=Math.max(0,Math.min(2,typeof dir==='number'?dir:lane+dir));sfx('click');}
-  function end(win,msg){if(ended)return;ended=true;cancelAnimationFrame(rafId);if(win)finishGame(score*12,45,msg);else offerRetry(msg+' Obstáculos superados: '+score+'.');}
-  function spawn(){obstacles.push({lane:Math.floor(Math.random()*3),y:-35,size:28+Math.random()*8,extra:Math.random()*45});}
-  function draw(){
-    const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#111a34');bg.addColorStop(1,'#090d1d');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='rgba(255,255,255,.045)';ctx.fillRect(W*.12,0,W*.76,H);
-    ctx.strokeStyle='rgba(139,124,255,.24)';ctx.lineWidth=2;[.375,.625].forEach(x=>{ctx.setLineDash([14,15]);ctx.beginPath();ctx.moveTo(W*x,0);ctx.lineTo(W*x,H);ctx.stroke();});ctx.setLineDash([]);
-    obstacles.forEach(o=>{ctx.font=o.size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚧',laneX(o.lane),o.y);});
-    ctx.shadowColor='#51e0c0';ctx.shadowBlur=18;ctx.font='34px serif';ctx.fillText('🏎️',laneX(lane),H-42);ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='11px sans-serif';ctx.textAlign='left';ctx.fillText('TÚ · '+score+'/'+goal,14,18);ctx.textAlign='right';ctx.fillStyle='#ffb84d';ctx.fillText('CPU · '+Math.min(goal,Math.floor(cpu))+'/'+goal,W-14,18);
-  }
-  function loop(ts){
-    if(ended||!game.active)return;const dt=Math.min(.05,(ts-last)/1000);last=ts;
-    if(!game.paused){
-      spawnT+=dt;if(spawnT>cfg.spawn){spawnT=0;spawn();}
-      cpu+=dt*cfg.cpu;obstacles.forEach(o=>o.y+=(cfg.speed+o.extra)*dt);
-      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];if(o.y>H-78&&o.y<H-23&&o.lane===lane){sfx('bad');end(false,'¡Choque! Elige otro carril.');return;}if(o.y>H+35){obstacles.splice(i,1);score++;sfx('good');if(score>=goal){end(true,'¡Carrera ganada! Dejaste al CPU atrás 🏆');return;}}}
-      if(cpu>=goal&&score<goal){end(false,'El Rival CPU cruzó primero 🤖');return;}
-    }
-    draw();hud(score,'Carrera · Tú '+score+'/'+goal+' · CPU '+Math.min(goal,Math.floor(cpu))+'/'+goal);rafId=requestAnimationFrame(loop);
-  }
-  body.querySelectorAll('[data-lane]').forEach(b=>b.addEventListener('pointerdown',()=>move(parseInt(b.dataset.lane,10))));
-  const kd=e=>{if(!game.active||game.paused)return;if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')move(-1);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')move(1);};
-  document.addEventListener('keydown',kd);body.appendChild(pauseBtn());hud(0,'Carrera · Tú 0/'+goal+' · CPU 0/'+goal);rafId=requestAnimationFrame(loop);
-  game.cleanup=()=>{ended=true;cancelAnimationFrame(rafId);document.removeEventListener('keydown',kd);};
-}
-/* ---------- Juego: QUIZ CLASH ---------- */
-function gQuizClash(){
-  const questions=[
-    {q:'¿Qué parte de una planta captura principalmente la luz?',o:['La clorofila','La raíz','La corteza','El suelo'],a:0},
-    {q:'¿Cuál es la capital del Perú?',o:['Cusco','Lima','Arequipa','Trujillo'],a:1},
-    {q:'¿Qué hace CSS en una página web?',o:['Guarda contraseñas','Controla el aspecto visual','Crea sonidos','Mide el tiempo'],a:1},
-    {q:'¿Cuál es la fórmula de la segunda ley de Newton?',o:['F = m × a','E = m ÷ c','P = a + b','V = d − t'],a:0},
-    {q:'¿Qué ayuda a estudiar mejor?',o:['Releer sin parar','Repaso activo','Dormir menos','Quitar todas las pausas'],a:1},
-    {q:'¿Qué es una hipótesis?',o:['Una pregunta sin tema','Una explicación que se puede poner a prueba','Un resultado seguro','Una opinión secreta'],a:1},
-    {q:'¿Qué opción protege mejor una cuenta?',o:['Repetir la clave','Compartir códigos','Usar 2 pasos','Publicar la contraseña'],a:2},
-    {q:'Cuando una emoción es intensa, ¿qué paso es útil?',o:['Negarla siempre','Hacer una pausa segura','Insultar','Aislarse sin avisar'],a:1}
-  ];
-  const cfg={easy:{cpu:2350,accuracy:.58},normal:{cpu:1900,accuracy:.7},hard:{cpu:1500,accuracy:.82}}[difficulty];
-  const body=shell('<div class="game-board quiz-board"><div class="quiz-score"><span>🧩 Tú <b id="quizYou">0</b></span><span>🤖 CPU <b id="quizCpu">0</b></span><span>❔ <b id="quizRound">1</b>/'+questions.length+'</span></div><div class="quiz-card"><h3 id="quizQuestion"></h3><div class="quiz-options" id="quizOptions"></div><p class="quiz-message" id="quizMsg">Elige una respuesta. Capi también está resolviendo.</p></div></div>'+
-    '<p class="game-message">Responde rápido y con calma. Gana quien acierte más preguntas.</p>');
-  const question=body.querySelector('#quizQuestion'),options=body.querySelector('#quizOptions'),msg=body.querySelector('#quizMsg');let index=0,you=0,cpu=0,cpuIndex=0,cpuTimer=null,ended=false;
-  function render(){if(ended)return;const item=questions[index];question.textContent=item.q;body.querySelector('#quizYou').textContent=you;body.querySelector('#quizCpu').textContent=cpu;body.querySelector('#quizRound').textContent=Math.min(index+1,questions.length);hud(you,'Pregunta '+Math.min(index+1,questions.length)+'/'+questions.length+' · CPU '+cpu);options.innerHTML='';item.o.forEach((choice,i)=>{const b=document.createElement('button');b.type='button';b.className='quiz-option';b.textContent=choice;b.addEventListener('click',()=>answer(i));options.appendChild(b);});}
-  function end(win,text){if(ended)return;ended=true;clearInterval(cpuTimer);if(win)finishGame(you*20,45,text);else offerRetry(text+' Resultado: '+you+'–'+cpu+'.');}
-  function answer(choice){if(ended||game.paused||!game.active)return;const item=questions[index],correct=choice===item.a;options.querySelectorAll('button').forEach(b=>b.disabled=true);if(correct){you++;sfx('good');msg.textContent='¡Correcto!';}else{sfx('bad');msg.textContent='Casi. La respuesta correcta era: '+item.o[item.a];}index++;if(index>=questions.length){end(you>=cpu,'¡Quiz completado! Tu conocimiento venció al CPU 🏆');return;}setTimeout(render,260);}
-  cpuTimer=setInterval(()=>{if(ended||game.paused)return;const item=questions[cpuIndex%questions.length];if(Math.random()<cfg.accuracy)cpu++;cpuIndex++;if(cpuIndex>=questions.length){end(you>=cpu,'El CPU terminó el quiz primero 🤖');return;}body.querySelector('#quizCpu').textContent=cpu;hud(you,'Pregunta '+Math.min(index+1,questions.length)+'/'+questions.length+' · CPU '+cpu);},cfg.cpu);
-  body.appendChild(pauseBtn());render();game.cleanup=()=>{ended=true;clearInterval(cpuTimer);};
-}
-/* ---------- Juego: WORD SPRINT ---------- */
-function gWordSprint(){
-  const cfg={easy:{time:55,cpu:1.9},normal:{time:45,cpu:2.35},hard:{time:37,cpu:2.85}}[difficulty],goal=8;
-  const words=['calma','enfoque','respirar','planeta','memoria','energia','amistad','valiente','equilibrio','sonrisa','curiosidad','avance'];
-  const body=shell('<div class="game-board word-board"><div class="word-score"><span>⌨️ Tú <b id="wordYou">0</b></span><span>🤖 CPU <b id="wordCpu">0</b></span><span>⏱ <b id="wordTime">'+cfg.time+'</b></span></div><div class="word-card"><small>ORDENA LAS LETRAS</small><strong id="wordScramble"></strong><form id="wordForm"><input id="wordInput" autocomplete="off" autocapitalize="none" placeholder="Escribe la palabra"><button class="btn primary" type="submit">Comprobar</button></form><p id="wordMsg">Cruza la meta de '+goal+' palabras antes que el CPU.</p></div></div>'+
-    '<p class="game-message">Cada acierto aumenta tu racha. Puedes usar teclado o tocar el botón.</p>');
-  const scrambleEl=body.querySelector('#wordScramble'),input=body.querySelector('#wordInput'),msg=body.querySelector('#wordMsg');let round=0,you=0,cpu=0,time=cfg.time,current='',timer=null,cpuTimer=null,ended=false;
-  function mix(word){let out=word.split('');for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]];}const result=out.join('');return result===word?word.slice(1)+word[0]:result;}
-  function next(){current=words[(round*3+Math.floor(Math.random()*3))%words.length];scrambleEl.textContent=mix(current).toUpperCase();input.value='';input.focus();}
-  function end(win,text){if(ended)return;ended=true;clearInterval(timer);clearInterval(cpuTimer);if(win)finishGame(you*25,45,text);else offerRetry(text+' Resultado: '+you+'–'+cpu+'.');}
-  body.querySelector('#wordForm').addEventListener('submit',e=>{e.preventDefault();if(ended||game.paused)return;const answer=normalText(input.value).trim();if(answer===current){you++;round++;sfx('good');msg.textContent='¡Correcta! Mantén la racha.';if(you>=goal){end(true,'¡Sprint completado! Llegaste antes que el CPU 🏆');return;}next();}else{msg.textContent='Todavía no. Mira las letras y prueba otra vez.';}hud(you,'Palabras '+you+'/'+goal+' · CPU '+Math.floor(cpu));});
-  cpuTimer=setInterval(()=>{if(ended||game.paused)return;cpu++;if(cpu>=goal){end(false,'El CPU terminó su sprint primero 🤖');return;}hud(you,'Palabras '+you+'/'+goal+' · CPU '+Math.floor(cpu));},cfg.cpu*1000);
-  timer=setInterval(()=>{if(ended||game.paused)return;time--;body.querySelector('#wordTime').textContent=time;if(time<=0)end(you>=cpu,'Tiempo. '+(you>=cpu?'Tu velocidad ganó 🏆':'El CPU fue más rápido 🤖'));},1000);
-  body.appendChild(pauseBtn());next();hud(0,'Palabras 0/'+goal+' · CPU 0');game.cleanup=()=>{ended=true;clearInterval(timer);clearInterval(cpuTimer);};
-}
-function arcadeInit(){
-  renderGames();
-  $('#difficulty').addEventListener('click', e => {
-    const b = e.target.closest('button[data-level]'); if(!b) return;
-    difficulty = b.dataset.level;
-    $$('#difficulty button').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    toast('Dificultad: '+difficulty);
-  });
-}
-function renderGames(){
-  const el = $('#gameGrid');
-  el.innerHTML = Object.keys(games).map(name => {
-    const g = games[name];
-    return '<button type="button" class="game-card" data-game="'+name+'">'+
-      '<div class="game-card-top"><div class="emoji">'+g.icon+'</div>'+(g.badge?'<span class="game-badge">'+g.badge+'</span>':'')+'</div><h3>'+name+'</h3><p>'+g.desc+'</p>'+
-      '<div class="high">Récord: '+(state.highScores[name]||0)+'</div></button>';
-  }).join('');
-  el.querySelectorAll('[data-game]').forEach(b =>
-    b.addEventListener('click', () => openGame(b.dataset.game)));
-}
-function openGame(name){
-  game = { name:name, active:true, cleanup:null, paused:false };
-  $('#gameIcon').textContent = games[name].icon;
-  $('#gameName').textContent = name;
-  $('#gameDesc').textContent = games[name].desc;
-  $('#gameBody').innerHTML = '';
-  $('#gameModal').classList.remove('hidden');
-  games[name].start();
-}
-function closeGame(){
-  if(game.cleanup){ try{ game.cleanup(); }catch(e){} }
-  game.active = false;
-  $('#gameModal').classList.add('hidden');
-}
-function restartGame(){
-  if(game.cleanup){ try{ game.cleanup(); }catch(e){} }
-  const name = game.name;
-  game = { name:name, active:true, cleanup:null, paused:false };
-  $('#gameBody').innerHTML = '';
-  games[name].start();
-}
-function shell(html){
-  const body = $('#gameBody');
-  body.innerHTML =
-    '<div class="game-hud">'+
-      '<span class="stat-chip">Puntos <b id="hudScore">0</b></span>'+
-      '<span class="stat-chip">Dificultad <b>'+difficulty+'</b></span>'+
-      '<span class="stat-chip">Estado <b id="hudState">Jugando</b></span></div>' + html;
-  return body;
-}
-function hud(score, txt){
-  const s  = $('#hudScore');  if(s && score !== undefined) s.textContent = score;
-  const st = $('#hudState');  if(st && txt) st.textContent = txt;
-}
-function pauseBtn(){
-  const row = document.createElement('div');
-  row.className = 'game-controls';
-  row.innerHTML = '<button type="button" class="btn ghost" id="pauseGame">⏸ Pausar</button>';
-  row.querySelector('#pauseGame').addEventListener('click', function(){
-    game.paused = !game.paused;
-    this.textContent = game.paused ? '▶ Reanudar' : '⏸ Pausar';
-    hud(undefined, game.paused?'Pausado':'Jugando');
-  });
-  return row;
-}
-function finishGame(score, xpAward, msg){
-  if(!game.active) return;
-  game.active = false;
-  state.games++;
-  state.highScores[game.name] = Math.max(state.highScores[game.name]||0, score);
-  xp(xpAward); sfx('win');
-  petBump('joy',8); renderPet();
-  $('#gameBody').innerHTML =
-    '<div class="board-center"><div style="text-align:center">'+
-    '<div style="font-size:50px">✨</div><h3>'+esc(game.name)+'</h3>'+
-    '<p class="game-message">'+msg+'</p>'+
-    '<div class="high">+'+xpAward+' XP · Récord '+(state.highScores[game.name]||0)+'</div>'+
-    '<div class="game-controls">'+
-    '<button type="button" class="btn primary" id="againBtn">Jugar de nuevo</button>'+
-    '<button type="button" class="btn ghost" id="quitBtn">Cerrar</button></div></div></div>';
-  $('#againBtn').addEventListener('click', restartGame);
-  $('#quitBtn').addEventListener('click', closeGame);
-}
-function offerRetry(msg){
-  const body = $('#gameBody');
-  const p = document.createElement('p');
-  p.className='game-message'; p.textContent=msg;
-  body.appendChild(p);
-  const row = document.createElement('div');
-  row.className='game-controls';
-  row.innerHTML =
-    '<button type="button" class="btn primary" id="retryBtn">Intentar de nuevo</button>'+
-    '<button type="button" class="btn ghost" id="quitBtn2">Cerrar</button>';
-  body.appendChild(row);
-  $('#retryBtn').addEventListener('click', restartGame);
-  $('#quitBtn2').addEventListener('click', closeGame);
-}
-function fitCanvas(cv){
-  const dpr = Math.min(2, devicePixelRatio||1);
-  const w = cv.clientWidth || cv.parentElement.clientWidth;
-  const h = cv.clientHeight || cv.parentElement.clientHeight;
-  cv.width = w*dpr; cv.height = h*dpr;
-  const ctx = cv.getContext('2d');
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  return { ctx:ctx, w:w, h:h };
-}
-
-/* ---------- Juego: KEYBOARD (antes Bubble Calm) ---------- */
-function gKeyboardLegacy(){
-  const SEMIS = [0,2,4,5,7,9,11,12,14,16,17,19,21,23,24];
-  const NAMES = ['Do','Re','Mi','Fa','Sol','La','Si','Do','Re','Mi','Fa','Sol','La','Si','Do'];
-  const KEYS  = ['a','s','d','f','g','h','j','k','l','ñ','z','x','c','v','b'];
-  const BASE  = 261.63;
-  const body = shell(
-    '<div class="piano-wrap"><div class="piano-hint">Toca las teclas o usa tu teclado (A S D F G H J K L Ñ Z X). Relájate 🎶</div>'+
-    '<div class="piano" id="pianoKeys"></div>'+
-    '<div class="calm-meter"><i id="calmFill"></i></div></div>');
-  const wrap = body.querySelector('#pianoKeys');
-  wrap.style.gridTemplateColumns = 'repeat(5,1fr)';
-  let score = 0; const hit = new Set();
-  function tone(semi){
-    const ctx = ensureCtx(); if(!ctx) return;
-    const f = BASE * Math.pow(2, semi/12);
-    [[f,.14],[f*2,.05]].forEach(cf => {
-      const o=ctx.createOscillator(), g=ctx.createGain(), fl=ctx.createBiquadFilter();
-      fl.type='lowpass'; fl.frequency.value=2400;
-      o.type='sine'; o.frequency.value=cf[0];
-      g.gain.setValueAtTime(.0001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(cf[1], ctx.currentTime+.02);
-      g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime+1.5);
-      o.connect(fl); fl.connect(g); g.connect(ctx.destination);
-      o.start(); o.stop(ctx.currentTime+1.6);
-    });
-  }
-  function press(i, keyEl){
-    score += 5; hit.add(i);
-    tone(SEMIS[i]);
-    keyEl.classList.add('pressed');
-    setTimeout(() => keyEl.classList.remove('pressed'), 260);
-    hud(score);
-    $('#calmFill').style.width = Math.min(100, score/150) + '%';
-    if(guide){
-      if(SEMIS[i] === guide.seq[guide.pos]){
-        guide.pos++; showNext();
-      } else {
-        keyEl.classList.add('wrong');
-        setTimeout(() => keyEl.classList.remove('wrong'), 280);
-      }
-    }
-    if(hit.size >= 12 && score >= 150)
-      finishGame(score, 30, '¡Sesión armónica completa! 🎶');
-  }
-  SEMIS.forEach(function(sm,i){
-    const k = document.createElement('button');
-    k.type='button'; k.className='piano-key';
-    k.innerHTML = '<span class="ripple"></span><b>'+KEYS[i].toUpperCase()+'</b><small>'+NAMES[i]+'</small>';
-    k.addEventListener('pointerdown', () => { if(game.active && !game.paused) press(i,k); });
-    wrap.appendChild(k);
-  });
-  /* --- Melodías guiadas (dominio público) --- */
-  const SONGS = {
-    'Oda a la Alegría': [4,4,5,7, 7,5,4,2, 0,0,2,4, 4,2,2,
-                         4,4,5,7, 7,5,4,2, 0,0,2,4, 2,0,0],
-    'Estrellita':       [0,0,7,7, 9,9,7, 5,5,4,4, 2,2,0,
-                         0,0,7,7, 9,9,7, 5,5,4,4, 2,2,0]
-  };
-  const row = document.createElement('div');
-  row.className = 'game-controls song-row';
-  row.innerHTML =
-    '<button type="button" class="btn ghost" data-song="Oda a la Alegría">🎧 Escuchar: Oda a la Alegría</button>'+
-    '<button type="button" class="btn ghost" data-song="Estrellita">🎧 Escuchar: Estrellita</button>'+
-    '<button type="button" class="btn primary" data-play="Oda a la Alegría">🎯 Tú la tocas: Oda</button>'+
-    '<button type="button" class="btn primary" data-play="Estrellita">🎯 Tú la tocas: Estrellita</button>';
-  body.appendChild(row);
-  let guide = null;
-  function clearHints(){ wrap.querySelectorAll('.piano-key').forEach(k => k.classList.remove('hint')); }
-  function showNext(){
-    clearHints();
-    if(!guide) return;
-    if(guide.pos >= guide.seq.length){
-      guide = null; xp(25);
-      toast('🎹 ¡Melodía completada! +25 XP'); sfx('win');
-      hud(undefined,'¡Melodía lograda!'); return;
-    }
-    const kIdx = SEMIS.indexOf(guide.seq[guide.pos]);
-    if(wrap.children[kIdx]) wrap.children[kIdx].classList.add('hint');
-  }
-  row.querySelectorAll('[data-song]').forEach(b => b.addEventListener('click', () => {
-    if(game.paused || !game.active) return;
-    const seq = SONGS[b.dataset.song];
-    hud(0,'🎧 Reproduciendo '+b.dataset.song+'…');
-    seq.forEach((sm,i) => setTimeout(() => {
-      if(!game.active) return;
-      tone(sm);
-      const el = wrap.children[SEMIS.indexOf(sm)];
-      if(el){ el.classList.add('pressed'); setTimeout(() => el.classList.remove('pressed'), 220); }
-    }, i*430));
-  }));
-  row.querySelectorAll('[data-play]').forEach(b => b.addEventListener('click', () => {
-    guide = { seq:SONGS[b.dataset.play].slice(), pos:0 };
-    hud(score,'🎯 Toca la tecla que brilla');
-    showNext();
-  }));
-  const kd = e => {
-    if(!game.active || game.paused) return;
-    const tg = e.target;
-    if(tg && (tg.tagName==='INPUT' || tg.tagName==='TEXTAREA')) return;
-    const i = KEYS.indexOf(e.key.toLowerCase());
-    if(i >= 0 && !e.repeat) press(i, wrap.children[i]);
-  };
-  document.addEventListener('keydown', kd);
-  game.cleanup = () => document.removeEventListener('keydown', kd);
-}
-
+/* Minijuegos antiguos retirados del runtime; se conservan fuera del proyecto. */
 /* ---------- Herramienta: PIANO VIRTUAL ---------- */
 function gKeyboard(){
   const TOTAL = 37; // C3 a C6: tres octavas completas
@@ -2578,362 +2217,7 @@ function gKeyboard(){
   game.cleanup=()=>{stopPlayback();document.removeEventListener('keydown',kd);clearHints();};
 }
 
-/* ---------- Juego: FOCUS TAP ---------- */
-function gFocusTap(){
-  const times = { easy:45, normal:38, hard:32 };
-  let time = times[difficulty], score = 0, timer = null;
-  const body = shell('<div class="game-board" id="ftBoard"></div>'+
-    '<p class="game-message">Haz clic en ✦. Cada acierto lo mueve. Llega a 35.</p>');
-  const board = body.querySelector('#ftBoard');
-  body.appendChild(pauseBtn());
-  function place(){
-    board.querySelectorAll('.game-target').forEach(x => x.remove());
-    const t = document.createElement('button');
-    t.type='button';
-    t.className = 'game-target'+(difficulty==='hard'?' tiny':'');
-    t.textContent = '✦';
-    t.style.left = (10+Math.random()*80)+'%';
-    t.style.top  = (10+Math.random()*78)+'%';
-    t.addEventListener('pointerdown', () => {
-      if(!game.active || game.paused) return;
-      score++; hud(score); sfx('good');
-      if(score >= 35){ clearInterval(timer); finishGame(score, 40, '¡35 objetivos completados! 🎯'); }
-      else place();
-    });
-    board.appendChild(t);
-  }
-  place(); hud(0,'Jugando · '+time+'s');
-  timer = setInterval(() => {
-    if(game.paused) return;
-    time--;
-    hud(score, 'Jugando · '+time+'s');
-    if(time <= 0){ clearInterval(timer); finishGame(score, score>=20?25:0, 'Tiempo agotado. Aciertos: '+score+'/35.'); }
-  }, 1000);
-  game.cleanup = () => clearInterval(timer);
-}
-
-/* ---------- Juego: MEMORY GLOW ---------- */
-function gMemory(){
-  const sp = { easy:[420,160], normal:[340,120], hard:[260,90] }[difficulty];
-  const body = shell('<div class="board-center"><div class="memory-grid" id="memGrid"></div></div>');
-  const grid = body.querySelector('#memGrid');
-  for(let i=0;i<16;i++){
-    const c = document.createElement('button');
-    c.type='button'; c.className='memory-cell'; c.dataset.i=i;
-    grid.appendChild(c);
-  }
-  const cells = Array.from(grid.children);
-  let seq=[], inputIdx=[], round=1, locked=true, ended=false;
-  const wait = ms => new Promise(r => setTimeout(r, ms));
-  async function show(){
-    locked=true; inputIdx=[]; hud((round-1)*20,'Ronda '+round+'/8');
-    seq.push(Math.floor(Math.random()*16));
-    await wait(400);
-    for(const i of seq){
-      cells[i].classList.add('lit'); sfx('click');
-      await wait(sp[0]);
-      cells[i].classList.remove('lit');
-      await wait(sp[1]);
-    }
-    locked=false;
-  }
-  cells.forEach(c => c.addEventListener('click', () => {
-    if(locked || ended || !game.active || game.paused) return;
-    const i = parseInt(c.dataset.i,10);
-    inputIdx.push(i);
-    c.classList.add('lit');
-    setTimeout(() => c.classList.remove('lit'), 150);
-    if(inputIdx[inputIdx.length-1] !== seq[inputIdx.length-1]){
-      ended=true; sfx('bad');
-      offerRetry('Secuencia fallida en la ronda '+round+'.');
-      return;
-    }
-    if(inputIdx.length === seq.length){
-      if(round >= 8) finishGame(round*20, 50, '¡Ocho rondas superadas! 🧠✨');
-      else { round++; setTimeout(show, 450); }
-    }
-  }));
-  hud(0,'Ronda 1/8');
-  show();
-  game.cleanup = function(){};
-}
-
-/* ---------- Juego: FOOD CATCH (antes Color Flow) ---------- */
-function gFoodCatch(){
-  const speedMult = { easy:.8, normal:1, hard:1.25 }[difficulty];
-  const spawnMs   = { easy:950, normal:750, hard:560 }[difficulty];
-  const GOOD = ['🍎','🍌','🍇','🍓','🍊'];
-  const body = shell('<div class="game-board"><canvas id="fcCv"></canvas></div>'+
-    '<p class="game-message">Mueve la cesta con el mouse, el dedo (o ← →). Atrapa comida 🍎 hasta 300 pts · si tocas una lata 🥫 pierdes. <b>🤖 Rival CPU compite contra ti: ¡llega a 300 antes que él!</b></p>');
-  const cvs = body.querySelector('#fcCv');
-  let env = fitCanvas(cvs), ctx = env.ctx, W = env.w, H = env.h;
-  let items=[], basket={ x:W/2, w:86 }, score=0, live=true,
-      rafId=null, last=performance.now(), spawnT=0, rScore=0;
-  function resizeC(){
-    env = fitCanvas(cvs); ctx = env.ctx; W = env.w; H = env.h;
-    basket.x = Math.min(Math.max(basket.x, 40), W-40);
-  }
-  resizeC();
-  const onRs = () => resizeC();
-  addEventListener('resize', onRs);
-  function spawn(){
-    const bad = Math.random() < Math.min(.16 + score*.0018, .32);
-    items.push({
-      x: 24+Math.random()*(W-48), y:-24,
-      v:(110+Math.random()*60)*speedMult*(1+score*.009),
-      e: bad ? '🥫' : GOOD[Math.floor(Math.random()*GOOD.length)],
-      bad: bad
-    });
-  }
-  function die(){
-    live=false; cancelAnimationFrame(rafId); sfx('bad');
-    cvs.parentElement.classList.add('danger-flash');
-    offerRetry('¡Era una lata! Puntos: '+score);
-  }
-  function loop(ts){
-    if(!live) return;
-    const dt = Math.min(48, ts-last)/1000; last=ts;
-    if(!game.paused){
-      spawnT += dt*1000;
-      if(spawnT > spawnMs){ spawnT=0; spawn(); }
-      rScore += dt*10*rivalRate();
-      if(live && rScore >= 300 && score < 300){
-        live=false; cancelAnimationFrame(rafId); sfx('bad');
-        offerRetry('🤖 ¡El Rival CPU llegó a 300 primero! Ibas por '+score+' pts. ¡Revancha!');
-        return;
-      }
-      items.forEach(it => it.y += it.v*dt);
-      for(let i=items.length-1;i>=0;i--){
-        const it = items[i], by = H-34;
-        if(it.y > by-16 && it.y < by+18 && Math.abs(it.x-basket.x) < basket.w/2){
-          items.splice(i,1);
-          if(it.bad){ die(); return; }
-          score += 10; sfx('good'); hud(score);
-          if(score >= 300){
-            live=false; cancelAnimationFrame(rafId);
-            finishGame(score, 40, '¡Cesta llena! 🧺 Atrapaste '+score+' puntos sin latas');
-            return;
-          }
-        } else if(it.y > H+30) items.splice(i,1);
-      }
-    }
-    const bg = ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#101527'); bg.addColorStop(1,'#0c0f1d');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.font='30px serif';
-    items.forEach(it => ctx.fillText(it.e, it.x, it.y));
-    ctx.font='34px serif';
-    ctx.fillText('🧺', basket.x, H-24);
-    ctx.strokeStyle='rgba(255,255,255,.12)';
-    ctx.beginPath(); ctx.moveTo(0,H-8); ctx.lineTo(W,H-8); ctx.stroke();
-    const rp = Math.min(100, rScore/3);
-    ctx.fillStyle='rgba(255,255,255,.09)'; ctx.fillRect(W*.3,10,W*.4,8);
-    ctx.fillStyle='#ffb84d'; ctx.fillRect(W*.3,10,W*.4*rp/100,8);
-    ctx.font='15px serif'; ctx.textAlign='right';
-    ctx.fillText('🤖', W*.3-6, 20);
-    ctx.font='11px sans-serif'; ctx.textAlign='left';
-    ctx.fillStyle='rgba(255,184,77,.9)';
-    ctx.fillText(Math.round(rScore)+' pts', W*.7+8, 19);
-    rafId = requestAnimationFrame(loop);
-  }
-  const mv = e => {
-    const r = cvs.getBoundingClientRect();
-    basket.x = Math.min(W-40, Math.max(40, e.clientX-r.left));
-  };
-  cvs.addEventListener('pointermove', mv);
-  cvs.addEventListener('pointerdown', mv);
-  const kd = e => {
-    if(!game.active || game.paused) return;
-    if(e.key==='ArrowLeft')  basket.x = Math.max(40, basket.x-28);
-    if(e.key==='ArrowRight') basket.x = Math.min(W-40, basket.x+28);
-  };
-  document.addEventListener('keydown', kd);
-  hud(0,'Jugando');
-  rafId = requestAnimationFrame(loop);
-  game.cleanup = function(){
-    live=false; cancelAnimationFrame(rafId);
-    removeEventListener('resize', onRs);
-    document.removeEventListener('keydown', kd);
-  };
-}
-/* ---------- Juego: GLOW CANVAS ---------- */
-function gCanvas(){
-  const body = shell(
-    '<div style="height:340px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:#0c101a;margin-top:12px">'+
-    '<canvas id="gcCv" style="width:100%;height:100%;display:block;touch-action:none;cursor:crosshair"></canvas></div>'+
-    '<div class="game-controls">'+
-    '<button type="button" class="btn ghost" id="gcClear">Limpiar</button>'+
-    '<button type="button" class="btn primary" id="gcSave">Guardar momento</button></div>'+
-    '<p class="game-message">Dibuja libremente. La primera vez que guardes ganas +10 XP.</p>');
-  const cvs = body.querySelector('#gcCv');
-  const env = fitCanvas(cvs), ctx = env.ctx;
-  let drawing=false, savedAward=false;
-  function pos(e){
-    const r = cvs.getBoundingClientRect();
-    return { x:e.clientX-r.left, y:e.clientY-r.top };
-  }
-  cvs.addEventListener('pointerdown', e => {
-    drawing=true;
-    try{ cvs.setPointerCapture(e.pointerId); }catch(err){}
-    const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);
-  });
-  cvs.addEventListener('pointermove', e => {
-    if(!drawing || game.paused) return;
-    const p=pos(e);
-    ctx.lineTo(p.x,p.y);
-    ctx.strokeStyle='hsl('+((Math.random()*70+230)|0)+' 90% 72%)';
-    ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke();
-  });
-  cvs.addEventListener('pointerup', () => drawing=false);
-  body.querySelector('#gcClear').addEventListener('click', () => ctx.clearRect(0,0,env.w,env.h));
-  body.querySelector('#gcSave').addEventListener('click', () => {
-    if(savedAward) return toast('Ya guardaste este momento');
-    savedAward=true; state.games++; xp(10); save();
-    toast('Momento guardado · +10 XP');
-  });
-  hud('∞','Libre');
-  game.cleanup = function(){};
-}
-
-/* ---------- Juego: SECRET RUN (personaje guiado) ---------- */
-function gSecretRun(){
-  const mult = { easy:.82, normal:1, hard:1.22 }[difficulty];
-  const body = shell('<div class="game-board"><canvas id="srCv"></canvas></div>'+
-    '<p class="game-message">Guía al personaje con el mouse o el dedo (o ↑ ↓). Esquiva los obstáculos '+
-    'y llega a la meta 🏁 antes que el <b>🤖 Rival CPU</b>: <b>+10 XP</b> ¡y saltará de felicidad!</p>');
-  const cvs = body.querySelector('#srCv');
-  let env = fitCanvas(cvs), ctx = env.ctx, W = env.w, H = env.h;
-  const GOAL = 5200, CHX = 90;
-  let dist=0, rDist=0, obs=[], dots=[], parts=[], charY=H/2, ty=H/2,
-      over=false, finished=false, jumpT=-1,
-      rafId=null, last=performance.now(), spawnAt=320, dust=0;
-  for(let i=0;i<40;i++) dots.push({ x:Math.random(), y:Math.random(), z:.3+Math.random()*.7 });
-  function resizeC(){
-    env = fitCanvas(cvs); ctx=env.ctx; W=env.w; H=env.h;
-    ty = Math.min(Math.max(ty,26), H-26);
-  }
-  resizeC();
-  const onRs = () => resizeC();
-  addEventListener('resize', onRs);
-  function speed(){ return (170 + dist*.045) * mult; }
-  function spawnObs(){
-    const kind = Math.floor(Math.random()*3);
-    if(kind===0)      obs.push({ x:W+40, y:H-70-Math.random()*40,   w:26, h:60+Math.random()*70 });
-    else if(kind===1) obs.push({ x:W+40, y:0,                      w:26, h:60+Math.random()*70 });
-    else              obs.push({ x:W+40, y:60+Math.random()*(H-220), w:70+Math.random()*40, h:26 });
-  }
-  function jumpCelebrate(){
-    jumpT=0; sfx('win');
-    for(let i=0;i<26;i++) parts.push({
-      x:CHX, y:H-60, vx:(Math.random()-.5)*160, vy:-120-Math.random()*140,
-      l:1, h:Math.random()*360 });
-  }
-  function rr(c,x,y,w,h,r){
-    c.beginPath(); c.moveTo(x+r,y);
-    c.arcTo(x+w,y,  x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
-    c.arcTo(x,  y+h,x,  y,  r); c.arcTo(x,  y,  x+w,y,  r);
-    c.closePath();
-  }
-  function crash(){
-    over=true; cancelAnimationFrame(rafId); sfx('bad');
-    offerRetry('💥 Chocaste al '+Math.min(99,Math.round(dist/GOAL*100))+'% del camino.');
-  }
-  function loop(ts){
-    if(over) return;
-    const dt = Math.min(.05,(ts-last)/1000); last=ts;
-    if(!game.paused){
-      charY += (ty-charY)*Math.min(1, dt*10);
-      dist  += speed()*dt;
-      rDist += 288*rivalRate()*dt;
-      if(!finished && !over && rDist >= GOAL){
-        over=true; cancelAnimationFrame(rafId); sfx('bad');
-        offerRetry('🤖 El Rival CPU cruzó la meta primero ('+Math.round(rDist/GOAL*100)+'% vs tu '+Math.round(dist/GOAL*100)+'%). ¡Otra vez!');
-        return;
-      }
-      if(dist >= spawnAt){ spawnAt += 240+Math.random()*160; spawnObs(); }
-      const vx = speed()*dt;
-      obs.forEach(o => o.x -= vx);
-      obs = obs.filter(o => o.x > -160);
-      dust += dt;
-      if(dust>.12){ dust=0; parts.push({ x:CHX-10, y:charY+14, vx:-40, vy:-20, l:.5, h:265 }); }
-      parts.forEach(p => { p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=300*dt; p.l-=dt*1.4; });
-      parts = parts.filter(p => p.l>0);
-      if(jumpT>=0){ jumpT+=dt*60; if(jumpT>46) jumpT=46; }
-      let cy = charY;
-      if(jumpT>0) cy -= Math.sin(jumpT/46*Math.PI)*46;
-      if(!finished){
-        for(const o of obs){
-          if(CHX+13>o.x && CHX-13<o.x+o.w && cy+13>o.y && cy-13<o.y+o.h){ crash(); return; }
-        }
-        if(dist >= GOAL){
-          finished=true; jumpCelebrate();
-          setTimeout(() => finishGame(100, 25, '¡META alcanzada! El personaje salta de felicidad 🏆'), 950);
-        }
-      }
-    }
-    const bg = ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#0b1024'); bg.addColorStop(1,'#141a33');
-    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-    dots.forEach(dp => {
-      dp.x -= speed()*dt*.0002*dp.z;
-      if(dp.x<0) dp.x+=1;
-      ctx.globalAlpha=.25+.5*dp.z; ctx.fillStyle='#aabbcc';
-      ctx.fillRect(dp.x*W, dp.y*H, 2, 2);
-    });
-    ctx.globalAlpha=1;
-    ctx.strokeStyle='rgba(140,124,255,.5)'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(0,H-46); ctx.lineTo(W,H-46); ctx.stroke();
-    const fx = W - (dist/GOAL)*(W+160);
-    if(fx < W+20 && fx > -20){
-      ctx.font='26px serif'; ctx.textAlign='center';
-      ctx.fillText('🏁', fx, H-54);
-    }
-    const rpct = Math.min(100, rDist/GOAL*100), rx = 14 + (rpct/100)*(W-28);
-    ctx.fillStyle='rgba(255,255,255,.1)'; ctx.fillRect(14,H-70,W-28,5);
-    ctx.fillStyle='#ffb84d'; ctx.fillRect(14,H-70,(W-28)*rpct/100,5);
-    ctx.font='15px serif'; ctx.fillText('🤖', Math.min(rx,W-16), H-58);
-    ctx.save();
-    ctx.shadowColor='#ff6b8a'; ctx.shadowBlur=14; ctx.fillStyle='#ff6b8a';
-    obs.forEach(o => { rr(ctx,o.x,o.y,o.w,o.h,8); ctx.fill(); });
-    ctx.restore();
-    parts.forEach(p => {
-      ctx.globalAlpha=Math.max(0,p.l);
-      ctx.fillStyle='hsl('+p.h+' 90% 65%)';
-      ctx.fillRect(p.x,p.y,4,4);
-    });
-    ctx.globalAlpha=1;
-    let cy2 = charY;
-    if(jumpT>0) cy2 -= Math.sin(jumpT/46*Math.PI)*46;
-    ctx.save();
-    ctx.shadowColor='#7c70ff'; ctx.shadowBlur=18;
-    ctx.font='30px serif'; ctx.textAlign='center';
-    ctx.fillText('👾', CHX, cy2);
-    ctx.restore();
-    hud(Math.min(100,Math.round(dist/GOAL*100))+'%', jumpT>=0?'¡Meta!':(game.paused?'Pausado':'Jugando'));
-    rafId = requestAnimationFrame(loop);
-  }
-  const mv = e => {
-    const r = cvs.getBoundingClientRect();
-    ty = Math.min(H-26, Math.max(26, e.clientY-r.top));
-  };
-  cvs.addEventListener('pointermove', mv);
-  cvs.addEventListener('pointerdown', mv);
-  const kd = e => {
-    if(!game.active || game.paused) return;
-    if(e.key==='ArrowUp')   ty = Math.max(26, ty-30);
-    if(e.key==='ArrowDown') ty = Math.min(H-26, ty+30);
-  };
-  document.addEventListener('keydown', kd);
-  hud('0%','Jugando');
-  rafId = requestAnimationFrame(loop);
-  game.cleanup = function(){
-    over=true; cancelAnimationFrame(rafId);
-    removeEventListener('resize', onRs);
-    document.removeEventListener('keydown', kd);
-  };
-}
-
+/* Minijuegos secundarios retirados del runtime; se conservan fuera del proyecto. */
 /* ---------- Configuración / Topbar / Globales ---------- */
 function settingsInit(){
   $('#settingsSound').addEventListener('change', e => {
@@ -2972,7 +2256,13 @@ function topbarInit(){
   });
   $('#collapseBtn').addEventListener('click', () => $('#sidebar').classList.toggle('collapsed'));
   $('#mobileMenu').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+  $('#profileBtn').addEventListener('click', () => showView('profile'));
   $('#enterBtn').addEventListener('click', () => {
+    if(GOOGLE_CLIENT_ID && !(state.user && state.user.email)){
+      renderWelcomeAuth();
+      toast('Primero inicia sesión con tu cuenta de Google');
+      return;
+    }
     $('#welcome').classList.add('hidden');
     $('#app').classList.remove('hidden');
     showView('home');
@@ -3375,12 +2665,6 @@ function wPlan(){
     : 'Empieza tu racha HOY: vuelve mañana y suma día 2 🔥';
   return plan;
 }
-function rivalRate(){
-  const lv = Math.min(25, state.level-1);
-  const base = {easy:.78, normal:.92, hard:1.04}[difficulty] || .92;
-  return base * (1 + lv*.01);
-}
-
 /* ---------- Fotos del equipo ---------- */
 function pickImage(cb){
   const inp = document.createElement('input');
@@ -3409,7 +2693,7 @@ function miniPlayerInit(){
   if($('#miniPlayer')) return;
   const el = document.createElement('div'); el.id = 'miniPlayer';
   el.innerHTML = '<button type="button" id="mpPlay" title="Reproducir/Pausar">▶</button>'+
-    '<span id="mpTitle" title="Abrir Calma">Música MindGlow</span>'+
+    '<span id="mpTitle" title="Abrir Música">Música MindGlow</span>'+
     '<button type="button" id="mpNext" title="Siguiente pista">⏭</button>';
   document.body.appendChild(el);
   updMusicMeta();
