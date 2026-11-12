@@ -17,7 +17,7 @@ const USERS_KEY = 'mindGlowUsers3';
 const ACTIVE_USER_KEY = 'mindGlowActiveUser3';
 const AI_DB_KEY = 'mindGlowKnowledge3';
 const AI_REMOTE_URL = /(?:\.web\.app|\.firebaseapp\.com)$/i.test(location.hostname)
-  ? 'https://web-emprendimiento-eight.vercel.app/api/ai'
+  ? 'https://midglow.vercel.app/api/ai'
   : '/api/ai';
 
 function today(){ return new Date().toISOString().slice(0,10); }

@@ -22,7 +22,7 @@ Firebase publica solo los archivos estáticos del frontend. La API, archivos de 
 
 ## API de IA: Vercel
 
-La interfaz publicada en `web.app` llama a `https://web-emprendimiento-eight.vercel.app/api/ai`.
+La interfaz publicada en `web.app` llama a `https://midglow.vercel.app/api/ai`.
 Configura en Vercel estas variables:
 
 - `AI_API_KEY`
