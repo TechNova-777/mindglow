@@ -33,6 +33,16 @@ Configura estas variables en el proyecto de Vercel que contiene `api/ai.js`:
 - `ALLOWED_ORIGINS` con `https://midglow.web.app,https://midglow.firebaseapp.com`
 - Opcionales para búsqueda: `SEARCH_API_KEY` y `SEARCH_API_URL`
 
+### Secretos de GitHub Actions
+
+En GitHub abre `Settings` → `Secrets and variables` → `Actions` → `New repository secret`. Para que los dos workflows puedan publicar, crea estos secretos:
+
+- `VERCEL_TOKEN` — token de despliegue de Vercel.
+- `FIREBASE_SERVICE_ACCOUNT` — JSON de la cuenta de servicio de Firebase.
+- `AI_API_KEY` — clave privada del proveedor de IA.
+
+Los demás valores (`AI_API_URL`, `AI_MODEL`, `AI_MAX_TOKENS`, `AI_IMAGE_URL`, `AI_IMAGE_MODEL`, `SEARCH_API_KEY`, `SEARCH_API_URL` y `ALLOWED_ORIGINS`) son opcionales. Si los guardas como secretos de GitHub, el workflow los sincroniza con Vercel en el siguiente despliegue.
+
 Si usas un dominio propio, añádelo a la misma variable, separado por comas. Ejemplo:
 
 ```text

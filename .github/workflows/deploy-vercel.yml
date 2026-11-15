@@ -23,6 +23,20 @@ jobs:
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
 
+      - name: Verificar credenciales de Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error title=Falta VERCEL_TOKEN::Crea el secreto VERCEL_TOKEN en Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if [ -z "$AI_API_KEY" ]; then
+            echo "::error title=Falta AI_API_KEY::Crea el secreto AI_API_KEY en GitHub; nunca lo pongas en script.js ni index.html."
+            exit 1
+          fi
+
       - name: Construir y publicar en Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
