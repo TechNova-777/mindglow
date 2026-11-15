@@ -26,7 +26,41 @@ jobs:
       - name: Construir y publicar en Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_API_URL: ${{ secrets.AI_API_URL }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          AI_MAX_TOKENS: ${{ secrets.AI_MAX_TOKENS }}
+          AI_IMAGE_URL: ${{ secrets.AI_IMAGE_URL }}
+          AI_IMAGE_MODEL: ${{ secrets.AI_IMAGE_MODEL }}
+          SEARCH_API_KEY: ${{ secrets.SEARCH_API_KEY }}
+          SEARCH_API_URL: ${{ secrets.SEARCH_API_URL }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
         run: |
+          sync_env() {
+            name="$1"
+            kind="$2"
+            value="${!name:-}"
+            if [ -z "$value" ]; then
+              return 0
+            fi
+            if printf '%s' "$value" | vercel env update "$name" --environment production --yes --token="$VERCEL_TOKEN" >/dev/null 2>&1; then
+              return 0
+            fi
+            printf '%s' "$value" | vercel env add "$name" --environment production --type "$kind" --yes --token="$VERCEL_TOKEN" >/dev/null
+          }
+
+          # GitHub secrets are optional. When present, keep Vercel's runtime
+          # environment synchronized without printing secret values in logs.
+          sync_env AI_API_KEY secret
+          sync_env AI_API_URL config
+          sync_env AI_MODEL config
+          sync_env AI_MAX_TOKENS config
+          sync_env AI_IMAGE_URL config
+          sync_env AI_IMAGE_MODEL config
+          sync_env SEARCH_API_KEY secret
+          sync_env SEARCH_API_URL config
+          sync_env ALLOWED_ORIGINS config
+
           vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
           vercel build --prod --token="$VERCEL_TOKEN"
           vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"

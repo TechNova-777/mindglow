@@ -22,14 +22,24 @@ Firebase publica solo los archivos estáticos del frontend. La API, archivos de 
 
 ## API de IA: Vercel
 
-La interfaz publicada en `web.app` llama a `https://midglow.vercel.app/api/ai`.
-Configura en Vercel estas variables:
+La interfaz publicada en Firebase o en un dominio propio llama a `https://midglow.vercel.app/api/ai`. Así la IA sigue funcionando aunque cambies el dominio del frontend.
+
+Configura estas variables en el proyecto de Vercel que contiene `api/ai.js`:
 
 - `AI_API_KEY`
 - `AI_API_URL`
 - `AI_MODEL`
 - `AI_MAX_TOKENS`
 - `ALLOWED_ORIGINS` con `https://midglow.web.app,https://midglow.firebaseapp.com`
+- Opcionales para búsqueda: `SEARCH_API_KEY` y `SEARCH_API_URL`
+
+Si usas un dominio propio, añádelo a la misma variable, separado por comas. Ejemplo:
+
+```text
+https://midglow.web.app,https://midglow.firebaseapp.com,https://tu-dominio.com,https://www.tu-dominio.com
+```
+
+No pegues `AI_API_KEY` en `script.js`, `index.html`, Firebase Hosting ni en un dominio público. La clave debe quedar únicamente como variable de entorno privada de Vercel. Si prefieres administrarla desde GitHub, crea el secreto `AI_API_KEY`; el workflow de Vercel lo sincroniza automáticamente cuando se ejecute. También puedes crear allí `AI_API_URL`, `AI_MODEL`, `AI_MAX_TOKENS`, `AI_IMAGE_URL`, `AI_IMAGE_MODEL`, `SEARCH_API_KEY`, `SEARCH_API_URL` y `ALLOWED_ORIGINS`.
 
 Para Glow Art configura también `AI_IMAGE_URL` y `AI_IMAGE_MODEL`.
 

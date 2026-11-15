@@ -172,10 +172,11 @@ button,input,textarea,select{font:inherit;color:inherit}
 .art-form input:focus,.art-form select:focus{border-color:rgba(81,224,192,.6);box-shadow:0 0 0 3px rgba(81,224,192,.08)}
 .art-form .btn{padding:9px 13px;white-space:nowrap;font-size:11px}
 .art-status{margin:8px 1px 0;color:#8fdccc;font-size:10px;line-height:1.4}
-.chat-form{display:flex;gap:8px}
+.chat-form{display:flex;gap:8px;width:100%;min-width:0}
 .chat-form input,.text-input{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:15px;padding:12px 14px;outline:none}
+.chat-form input{flex:1;min-width:0;width:auto}
 .chat-form input:focus,.text-input:focus{border-color:rgba(151,141,255,.5)}
-.chat-form button{width:46px;border:0;border-radius:15px;background:#7f73ff;cursor:pointer}
+.chat-form button{width:46px;flex:0 0 46px;border:0;border-radius:15px;background:#7f73ff;cursor:pointer}
 .ai-side{display:grid;gap:12px;align-content:start}
 .action-tile{display:block;width:100%;margin-top:8px;border:1px solid var(--line);background:rgba(255,255,255,.03);padding:12px;border-radius:14px;text-align:left;cursor:pointer}
 .ai-side p{color:var(--muted);font-size:12px;line-height:1.6;margin-top:10px}

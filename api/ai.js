@@ -23,6 +23,13 @@ function json(res, status, body){
   res.status(status).json(body);
 }
 
+function origin(value){
+  const raw = String(value || '').trim();
+  if(!raw) return '';
+  try{ return new URL(raw).origin; }
+  catch(e){ return raw.replace(/\/+$/, ''); }
+}
+
 function extractAnswer(data){
   if(data && typeof data.output_text === "string") return data.output_text.trim();
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
@@ -101,16 +108,17 @@ async function retrieveSources(query){
 module.exports = async function handler(req, res){
   const headers = req.headers || {};
   const configuredOrigins = String(process.env.ALLOWED_ORIGINS || process.env.ALLOWED_ORIGIN || '')
-    .split(',').map(origin => origin.trim()).filter(Boolean);
+    .split(',').map(origin).filter(Boolean);
   const allowedOrigins = new Set([
     'https://midglow.web.app',
     'https://midglow.firebaseapp.com',
     'https://web-emprendimiento-eight.vercel.app',
+    'https://midglow.vercel.app',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     ...configuredOrigins
   ]);
-  const requestOrigin = headers.origin;
+  const requestOrigin = origin(headers.origin);
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   if(requestOrigin && allowedOrigins.has(requestOrigin))

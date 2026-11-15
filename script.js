@@ -16,9 +16,11 @@ const KEY = 'mindGlow3';
 const USERS_KEY = 'mindGlowUsers3';
 const ACTIVE_USER_KEY = 'mindGlowActiveUser3';
 const AI_DB_KEY = 'mindGlowKnowledge3';
-const AI_REMOTE_URL = /(?:\.web\.app|\.firebaseapp\.com)$/i.test(location.hostname)
-  ? 'https://midglow.vercel.app/api/ai'
-  : '/api/ai';
+const AI_GATEWAY_ORIGIN = 'https://midglow.vercel.app';
+const IS_LOCAL_HOST = /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
+const AI_REMOTE_URL = IS_LOCAL_HOST || /\.vercel\.app$/i.test(location.hostname)
+  ? '/api/ai'
+  : AI_GATEWAY_ORIGIN + '/api/ai';
 
 function today(){ return new Date().toISOString().slice(0,10); }
 function fmt(s){ if(!Number.isFinite(s)) return '0:00'; return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
@@ -706,6 +708,8 @@ async function askExternalAI(question, localOut, guard){
 function aiInit(){
   const box = $('#chatMessages'), input = $('#chatInput');
   function add(t, who, actions, sources, provider){
+    if(!box) return;
+    t = String(t == null ? '' : t);
     const d = document.createElement('div');
     d.className = 'bubble ' + who;
     t.split('\n').forEach((line,i) => {
@@ -754,11 +758,13 @@ function aiInit(){
   window.refreshGlowAI = () => {
     box.innerHTML = '';
     add(welcome(),'ai');
-    (state.aiHistory || []).slice(-12).forEach(m => add(m.text, m.role === 'user' ? 'user' : 'ai', m.actions || [], m.sources || [], {
-      source:m.source, provider:m.provider, model:m.model
-    }));
+    (Array.isArray(state.aiHistory) ? state.aiHistory : []).slice(-12).forEach(m => {
+      if(!m || typeof m.text !== 'string' || !m.text.trim()) return;
+      add(m.text, m.role === 'user' ? 'user' : 'ai', Array.isArray(m.actions) ? m.actions : [], Array.isArray(m.sources) ? m.sources : [], {
+        source:m.source, provider:m.provider, model:m.model
+      });
+    });
   };
-  window.refreshGlowAI();
 
   /* --- Preguntas de conversación: respuestas divertidas --- */
   const pick = a => a[Math.floor(Math.random()*a.length)];
@@ -980,25 +986,45 @@ function aiInit(){
       title:knowledgeHit.title, category:knowledgeHit.category, answer:knowledgeHit.answer
     } : null, emotion:emotionSignal, sources:sources}];
   }
-  $('#chatForm').addEventListener('submit', e => {
-    e.preventDefault();
+  const chatForm = $('#chatForm');
+  const sendChat = e => {
+    if(e && e.preventDefault) e.preventDefault();
+    if(!input) return;
     const t = input.value.trim(); if(!t) return;
     add(t,'user'); input.value = '';
     const guard = {userId:activeUserId, serial:++aiRequestSerial};
     $('#aiStatus').textContent = 'Pensando y buscando…';
     setTimeout(async () => {
-      if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
-      const localOut = respond(t);
-      $('#aiStatus').textContent = 'Consultando conocimiento externo…';
-      const out = await askExternalAI(t, localOut, guard);
-      if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
-      add(out[0],'ai',out[1],out[2] && out[2].sources,out[2]);
-      if(out[2] && out[2].intent === 'art' && out[2].artPrompt)
-        generateGlowImage(out[2].artPrompt, 'ilustración digital cinematográfica', guard);
-      $('#aiStatus').textContent = out[2] && out[2].source === 'external-ai' ? ((out[2].provider || 'IA externa')+' conectada') :
-        (out[2] && out[2].fallback ? 'Base local activa' : 'Lista para escucharte');
+      try{
+        if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
+        const localOut = respond(t);
+        $('#aiStatus').textContent = 'Consultando conocimiento externo…';
+        const out = await askExternalAI(t, localOut, guard);
+        if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
+        add(out[0],'ai',out[1],out[2] && out[2].sources,out[2]);
+        if(out[2] && out[2].intent === 'art' && out[2].artPrompt)
+          generateGlowImage(out[2].artPrompt, 'ilustración digital cinematográfica', guard);
+        $('#aiStatus').textContent = out[2] && out[2].source === 'external-ai' ? ((out[2].provider || 'IA externa')+' conectada') :
+          (out[2] && out[2].fallback ? 'Base local activa' : 'Lista para escucharte');
+      }catch(error){
+        console.error('Glow AI error:', error);
+        if(guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return;
+        add('No pude procesar ese mensaje todavía. Intenta de nuevo; tu conversación sigue aquí.', 'ai');
+        $('#aiStatus').textContent = 'Base local activa';
+      }
     }, 550);
-  });
+  };
+  if(chatForm){
+    chatForm.addEventListener('submit', sendChat);
+    const sendButton = chatForm.querySelector('button');
+    if(sendButton) sendButton.addEventListener('click', sendChat);
+    if(input) input.addEventListener('keydown', e => {
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        sendChat(e);
+      }
+    });
+  }
   $$('.ai-actions button').forEach(b => b.addEventListener('click', () => {
     if(b.dataset.imagePrompt){
       const prompt = b.dataset.imagePrompt;
@@ -1022,6 +1048,9 @@ function aiInit(){
     $('#aiStatus').textContent = 'Creando imagen…';
     generateGlowImage(prompt, artStyle ? artStyle.value : 'ilustración digital cinematográfica', guard);
   });
+  // Registrar los eventos antes de reconstruir el historial guardado.
+  // Así una entrada antigua o dañada nunca deja el formulario sin handler.
+  window.refreshGlowAI();
 }
 
 /* ---------- Respiración ---------- */
