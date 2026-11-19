@@ -26,6 +26,15 @@ function normalizeAiEndpoint(value){
   if(!raw) return '';
   return /\/api\/ai$/i.test(raw) ? raw : raw + '/api/ai';
 }
+async function fetchAI(url, options, timeoutMs){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs || 30000);
+  try{
+    return await fetch(url, Object.assign({}, options || {}, {signal:controller.signal}));
+  }finally{
+    clearTimeout(timer);
+  }
+}
 const AI_REMOTE_URL = normalizeAiEndpoint(PUBLIC_AI_ENDPOINT) || (
   IS_LOCAL_HOST ? '/api/ai' :
   /(?:^|\.)web\.app$/i.test(location.hostname) || /(?:^|\.)firebaseapp\.com$/i.test(location.hostname)
@@ -662,7 +671,7 @@ async function askExternalAI(question, localOut, guard){
   const meta = localOut[2] || {};
   const localFallback = reason => {
     if(reason === 'external-unavailable'){
-      return ['No pude conectar con Gemini. Ejecuta Mind Glow con `node server.js` y revisa las variables de entorno del despliegue.', localOut[1], Object.assign({}, meta, {source:'local', fallback:reason})];
+      return ['La IA externa no está disponible en este momento. Sigo aquí con mi base local para que no pierdas tu conversación.', localOut[1], Object.assign({}, meta, {source:'local', fallback:reason})];
     }
     return [localOut[0], localOut[1], Object.assign({}, meta, {source:'local', fallback:reason})];
   };
@@ -680,7 +689,7 @@ async function askExternalAI(question, localOut, guard){
     const history = (state.aiHistory || []).slice(0,-2).slice(-8).map(item => ({
       role:item.role === 'assistant' ? 'assistant' : 'user', content:item.text
     }));
-    const res = await fetch(AI_REMOTE_URL, {
+    const res = await fetchAI(AI_REMOTE_URL, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         message:question,
@@ -688,7 +697,7 @@ async function askExternalAI(question, localOut, guard){
         history,
         localContext:localContext
       })
-    });
+    }, 30000);
     const data = await res.json().catch(() => ({}));
     if(!res.ok || !data.answer) return localFallback('external-unavailable');
     if(!guard || guard.userId !== activeUserId || guard.serial !== aiRequestSerial) return localFallback('stale');
@@ -1847,7 +1856,7 @@ const Studio = (() => {
   async function requestGameSpec(prompt, base){
     for(let attempt=0;attempt<2;attempt++){
       try{
-        const res=await fetch(AI_REMOTE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'game',prompt})});
+        const res=await fetchAI(AI_REMOTE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'game',prompt})},25000);
         const data=await res.json().catch(()=>({}));
         if(res.ok&&data.game)return {spec:mergeGameSpec(base,data.game),source:data.source||'external-game-ai'};
         if(res.status<500||attempt===1)break;
@@ -2111,6 +2120,25 @@ const Studio = (() => {
     if(busy)return;const prompt=String($s('studioPrompt').value||'').trim();if(!prompt){toast('Describe una idea para crear tu mundo');$s('studioPrompt').focus();return;}
     busy=true;running=false;won=false;const button=$s('studioGenerate');button.disabled=true;button.textContent='Construyendo mundo…';$s('studioEmpty').classList.remove('hidden');$s('studioHud').classList.remove('visible');
     try{for(let i=0;i<3;i++){setPipeline(i);await wait(180);}const localSpec=parsePromptEnhanced(prompt);$s('studioGameStatus').textContent='Gemini diseña las reglas del mundo…';const planned=await requestGameSpec(prompt,localSpec);spec=planned.spec;if(variation)spec.seed=(Math.random()*0xffffffff)>>>0;setPipeline(3);await wait(180);if(initRenderer())buildWorldEnhanced();renderSpecEnhanced();setPipeline(5);$s('studioGameStatus').textContent='Mundo listo · '+(spec.objective==='survive'?'sobrevive 45 s':spec.objective==='collect'?'recoge todas las monedas y activa el portal':'llega al portal');state.studioDraft='';persist();addChat('Tu mundo está listo: '+spec.genreName+' en '+spec.worldName+'. '+(planned.source==='external-game-ai'?'Gemini interpretó la idea y configuró el objetivo. ':'')+'Explóralo y dime qué quieres cambiar.','ai');}
+    catch(error){
+      console.error('Game Studio AI error:', error);
+      try{
+        spec=parsePromptEnhanced(prompt);
+        if(initRenderer()) buildWorldEnhanced();
+        renderSpecEnhanced();
+        setPipeline(5);
+        $s('studioGameStatus').textContent='Mundo listo · modo local seguro';
+        state.studioDraft='';
+        persist();
+        addChat('La IA externa tardó demasiado, pero construí el mundo con el motor local. Puedes seguir editándolo sin perder tu proyecto.','ai');
+      }catch(recoveryError){
+        console.error('Game Studio recovery error:', recoveryError);
+        $s('studioGameStatus').textContent='No se pudo abrir el mundo 3D. Tu idea sigue guardada.';
+        state.studioDraft=prompt;
+        persist();
+        toast('Guardé tu idea; reintenta abrir Game Studio');
+      }
+    }
     finally{button.disabled=false;button.textContent='✦ Generar mundo 3D';busy=false;}
   }
   function addChat(text,who){const box=$s('studioChat');if(!box)return;const d=document.createElement('div');d.className='studio-chat-msg '+who;d.innerHTML='<span>'+(who==='ai'?'✦':'◉')+'</span><p></p>';d.querySelector('p').textContent=text;box.appendChild(d);box.scrollTop=box.scrollHeight;}
@@ -2635,10 +2663,10 @@ async function generateGlowImage(prompt, style, guard){
   setArtStatus('Creando una imagen única de Mind Glow…');
   let data = {};
   try{
-    const res = await fetch(AI_REMOTE_URL, {
+    const res = await fetchAI(AI_REMOTE_URL, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({mode:'image', prompt:brief, style:style || 'ilustración digital cinematográfica'})
-    });
+    }, 45000);
     data = await res.json().catch(() => ({}));
     if(guard && (guard.userId !== activeUserId || guard.serial !== aiRequestSerial)) return;
     if(!res.ok || !data.imageUrl){
