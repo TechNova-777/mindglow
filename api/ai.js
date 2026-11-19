@@ -30,6 +30,22 @@ function origin(value){
   catch(e){ return raw.replace(/\/+$/, ''); }
 }
 
+function sameOriginRequest(requestOrigin, headers){
+  if(!requestOrigin) return false;
+  const forwardedHost = String(headers['x-forwarded-host'] || '').split(',')[0].trim();
+  const host = forwardedHost || String(headers.host || '').split(',')[0].trim();
+  if(!host) return false;
+  try{
+    const parsed = new URL(requestOrigin);
+    if(parsed.host !== host) return false;
+    const forwardedProto = String(headers['x-forwarded-proto'] || '').split(',')[0].trim();
+    const expectedProtocol = forwardedProto || (/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host) ? 'http' : 'https');
+    return parsed.protocol === expectedProtocol + ':';
+  }catch(e){
+    return false;
+  }
+}
+
 function extractAnswer(data){
   if(data && typeof data.output_text === "string") return data.output_text.trim();
   const content = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
@@ -119,16 +135,18 @@ module.exports = async function handler(req, res){
     ...configuredOrigins
   ]);
   const requestOrigin = origin(headers.origin);
+  const originAllowed = requestOrigin && (allowedOrigins.has(requestOrigin) || sameOriginRequest(requestOrigin, headers));
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Type", "application/json; charset=utf-8");
-  if(requestOrigin && allowedOrigins.has(requestOrigin))
+  res.setHeader("Vary", "Origin");
+  if(originAllowed)
     res.setHeader("Access-Control-Allow-Origin", requestOrigin);
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 
   if(req.method === "OPTIONS") return res.status(204).end();
   if(req.method !== "POST") return json(res, 405, {error:"METHOD_NOT_ALLOWED"});
-  if(requestOrigin && !allowedOrigins.has(requestOrigin))
+  if(requestOrigin && !originAllowed)
     return json(res, 403, {error:"ORIGIN_NOT_ALLOWED"});
 
   let body = req.body || {};

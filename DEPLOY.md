@@ -10,6 +10,14 @@ Mind Glow tiene el frontend público en Firebase Hosting y conserva la API de IA
 
 No abras `index.html` con Live Server si quieres probar la IA: ese servidor local no ejecuta `/api/ai`.
 
+La clave se escribe en `.env.local`, que ya esta excluido de Git. Ejemplo minimo:
+
+```text
+AI_API_KEY=tu_clave_privada
+AI_API_URL=https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+AI_MODEL=gemini-3.1-flash-lite
+```
+
 ## Frontend principal: Firebase Hosting
 
 El sitio tradicional es `https://midglow.web.app`. La configuración está en `firebase.json` y `.firebaserc`.
@@ -22,7 +30,13 @@ Firebase publica solo los archivos estáticos del frontend. La API, archivos de 
 
 ## API de IA: Vercel
 
-La interfaz publicada en Firebase o en un dominio propio llama a `https://midglow.vercel.app/api/ai`. Así la IA sigue funcionando aunque cambies el dominio del frontend.
+Si frontend y API estan en el mismo dominio, la interfaz usa automaticamente `/api/ai`. Si Firebase o un dominio propio aloja solo el frontend, edita `site-config.js` y coloca la URL publica de la API:
+
+```js
+window.MINDGLOW_CONFIG = { aiEndpoint: "https://tu-api.vercel.app/api/ai" };
+```
+
+La URL por defecto para los sitios Firebase existentes sigue siendo `https://midglow.vercel.app/api/ai`.
 
 Configura estas variables en el proyecto de Vercel que contiene `api/ai.js`:
 
@@ -30,7 +44,7 @@ Configura estas variables en el proyecto de Vercel que contiene `api/ai.js`:
 - `AI_API_URL`
 - `AI_MODEL`
 - `AI_MAX_TOKENS`
-- `ALLOWED_ORIGINS` con `https://midglow.web.app,https://midglow.firebaseapp.com`
+- `ALLOWED_ORIGINS` con los dominios desde donde se servira el frontend, por ejemplo `https://midglow.web.app,https://midglow.firebaseapp.com,https://tu-dominio.com`
 - Opcionales para búsqueda: `SEARCH_API_KEY` y `SEARCH_API_URL`
 
 ### Secretos de GitHub Actions
@@ -49,7 +63,7 @@ Si usas un dominio propio, añádelo a la misma variable, separado por comas. Ej
 https://midglow.web.app,https://midglow.firebaseapp.com,https://tu-dominio.com,https://www.tu-dominio.com
 ```
 
-No pegues `AI_API_KEY` en `script.js`, `index.html`, Firebase Hosting ni en un dominio público. La clave debe quedar únicamente como variable de entorno privada de Vercel. Si prefieres administrarla desde GitHub, crea el secreto `AI_API_KEY`; el workflow de Vercel lo sincroniza automáticamente cuando se ejecute. También puedes crear allí `AI_API_URL`, `AI_MODEL`, `AI_MAX_TOKENS`, `AI_IMAGE_URL`, `AI_IMAGE_MODEL`, `SEARCH_API_KEY`, `SEARCH_API_URL` y `ALLOWED_ORIGINS`.
+No pegues `AI_API_KEY` en `site-config.js`, `script.js`, `index.html`, Firebase Hosting ni en un dominio publico. La clave debe quedar unicamente como variable de entorno privada de Vercel. Si prefieres administrarla desde GitHub, crea el secreto `AI_API_KEY`; el workflow de Vercel lo sincroniza automaticamente cuando se ejecute. Tambien puedes crear alli `AI_API_URL`, `AI_MODEL`, `AI_MAX_TOKENS`, `AI_IMAGE_URL`, `AI_IMAGE_MODEL`, `SEARCH_API_KEY`, `SEARCH_API_URL` y `ALLOWED_ORIGINS`.
 
 Para Glow Art configura también `AI_IMAGE_URL` y `AI_IMAGE_MODEL`.
 

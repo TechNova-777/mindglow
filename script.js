@@ -16,11 +16,22 @@ const KEY = 'mindGlow3';
 const USERS_KEY = 'mindGlowUsers3';
 const ACTIVE_USER_KEY = 'mindGlowActiveUser3';
 const AI_DB_KEY = 'mindGlowKnowledge3';
-const AI_GATEWAY_ORIGIN = 'https://midglow.vercel.app';
 const IS_LOCAL_HOST = /^(localhost|127\.0\.0\.1)$/i.test(location.hostname);
-const AI_REMOTE_URL = IS_LOCAL_HOST || /\.vercel\.app$/i.test(location.hostname)
-  ? '/api/ai'
-  : AI_GATEWAY_ORIGIN + '/api/ai';
+const AI_DEFAULT_GATEWAY = 'https://midglow.vercel.app/api/ai';
+const PUBLIC_AI_ENDPOINT = typeof window !== 'undefined' && window.MINDGLOW_CONFIG
+  ? window.MINDGLOW_CONFIG.aiEndpoint
+  : '';
+function normalizeAiEndpoint(value){
+  const raw = String(value || '').trim().replace(/\/+$/, '');
+  if(!raw) return '';
+  return /\/api\/ai$/i.test(raw) ? raw : raw + '/api/ai';
+}
+const AI_REMOTE_URL = normalizeAiEndpoint(PUBLIC_AI_ENDPOINT) || (
+  IS_LOCAL_HOST ? '/api/ai' :
+  /(?:^|\.)web\.app$/i.test(location.hostname) || /(?:^|\.)firebaseapp\.com$/i.test(location.hostname)
+    ? AI_DEFAULT_GATEWAY
+    : '/api/ai'
+);
 
 function today(){ return new Date().toISOString().slice(0,10); }
 function fmt(s){ if(!Number.isFinite(s)) return '0:00'; return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
